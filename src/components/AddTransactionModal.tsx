@@ -44,7 +44,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [type, setType] = useState<TransactionType>('expense');
   const [rawAmount, setRawAmount] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<Category>(EXPENSE_CATEGORIES[0]);
-  const [selectedWallet, setSelectedWallet] = useState<Wallet>(WALLETS[1]); // Default: Ngân hàng
+  const [selectedWallet, setSelectedWallet] = useState<Wallet>(WALLETS[1]); // Mặc định: Ngân hàng
   const [note, setNote] = useState<string>('');
   const [date, setDate] = useState<string>(getTodayString());
 
@@ -85,7 +85,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Reset form
     setRawAmount('');
     setNote('');
     onClose();
@@ -114,6 +113,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 styles.closeBtn,
                 { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' },
               ]}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons name="close" size={20} color={isDark ? '#94A3B8' : '#64748B'} />
             </TouchableOpacity>
@@ -187,9 +187,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </View>
             </View>
 
-            {/* Quick Add Chips */}
-            <View style={styles.quickChipsRow}>
-              {[50000, 100000, 200000, 500000, 1000000].map((val) => (
+            {/* Quick Add Chips (Horizontal scrollable to prevent any screen crowding) */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickChipsScroll}
+            >
+              {[50000, 100000, 200000, 500000, 1000000, 2000000].map((val) => (
                 <TouchableOpacity
                   key={val}
                   style={[
@@ -210,13 +214,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 style={[styles.chip, styles.chipClear]}
                 onPress={() => setRawAmount('')}
               >
-                <Text style={styles.chipClearText}>Xóa</Text>
+                <Text style={styles.chipClearText}>Xóa số</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
 
             {/* Wallet Picker */}
             <Text style={[styles.sectionTitle, { color: isDark ? '#F8FAFC' : '#334155' }]}>
-              Chọn Nguồn Tiền
+              Chọn Nguồn Tiền (Ví)
             </Text>
             <View style={styles.walletRow}>
               {WALLETS.map((w) => {
@@ -244,6 +248,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                         { color: isSelected ? (isDark ? '#F8FAFC' : '#0F172A') : isDark ? '#94A3B8' : '#64748B' },
                         isSelected && { fontWeight: '700' },
                       ]}
+                      numberOfLines={1}
                     >
                       {w.name}
                     </Text>
@@ -340,7 +345,7 @@ const styles = StyleSheet.create({
   sheetContainer: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '90%',
+    maxHeight: '92%',
     paddingBottom: 34,
   },
   header: {
@@ -389,7 +394,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
   },
   segmentText: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -418,15 +423,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
-  quickChipsRow: {
+  quickChipsScroll: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 18,
+    gap: 8,
+    paddingBottom: 4,
+    marginBottom: 16,
   },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
   },
   chipText: {
@@ -443,7 +449,7 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     marginBottom: 10,
   },
@@ -474,14 +480,15 @@ const styles = StyleSheet.create({
   categoryCard: {
     width: '31%',
     borderRadius: 14,
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
     alignItems: 'center',
     borderWidth: 1,
   },
   catIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,

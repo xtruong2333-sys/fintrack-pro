@@ -144,6 +144,7 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({
           data={categoryList}
           totalAmount={totalAmount}
           title={filterType === 'expense' ? 'Tỷ Lệ Chi Tiêu Theo Danh Mục' : 'Tỷ Lệ Nguồn Thu'}
+          isDark={isDark}
         />
       </ScrollView>
     </View>

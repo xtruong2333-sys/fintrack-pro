@@ -232,6 +232,7 @@ export default function App() {
                   { color: isDark ? '#64748B' : '#94A3B8' },
                   activeTab === 'home' && { color: '#38BDF8', fontWeight: '800' },
                 ]}
+                numberOfLines={1}
               >
                 Tổng quan
               </Text>
@@ -253,6 +254,7 @@ export default function App() {
                   { color: isDark ? '#64748B' : '#94A3B8' },
                   activeTab === 'analytics' && { color: '#38BDF8', fontWeight: '800' },
                 ]}
+                numberOfLines={1}
               >
                 Thống kê
               </Text>
@@ -291,6 +293,7 @@ export default function App() {
                   { color: isDark ? '#64748B' : '#94A3B8' },
                   activeTab === 'history' && { color: '#38BDF8', fontWeight: '800' },
                 ]}
+                numberOfLines={1}
               >
                 Lịch sử
               </Text>
@@ -312,6 +315,7 @@ export default function App() {
                   { color: isDark ? '#64748B' : '#94A3B8' },
                   activeTab === 'settings' && { color: '#38BDF8', fontWeight: '800' },
                 ]}
+                numberOfLines={1}
               >
                 Cài đặt
               </Text>

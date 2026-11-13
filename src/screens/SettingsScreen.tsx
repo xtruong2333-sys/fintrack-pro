@@ -179,7 +179,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 },
               ]}
             >
-              <Text style={[styles.budgetAmountText, { color: textPrimary }]}>
+              <Text
+                style={[styles.budgetAmountText, { color: textPrimary }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {formatCurrency(budget)}
               </Text>
               <TouchableOpacity

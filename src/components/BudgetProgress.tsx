@@ -33,11 +33,14 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({ spent, budget, i
       <View style={styles.topRow}>
         <View style={styles.titleGroup}>
           <Ionicons name="pie-chart" size={15} color={isDark ? '#38BDF8' : '#2563EB'} />
-          <Text style={[styles.title, { color: isDark ? '#F8FAFC' : '#475569' }]}>
+          <Text
+            style={[styles.title, { color: isDark ? '#F8FAFC' : '#475569' }]}
+            numberOfLines={1}
+          >
             Hạn Mức Tháng Này
           </Text>
         </View>
-        <Text style={[styles.percentBadge, { color: getProgressColor() }]}>
+        <Text style={[styles.percentBadge, { color: getProgressColor() }]} numberOfLines={1}>
           {percent}%
         </Text>
       </View>
@@ -60,11 +63,17 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({ spent, budget, i
       </View>
 
       <View style={styles.bottomRow}>
-        <Text style={[styles.spentText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+        <Text
+          style={[styles.spentText, { color: isDark ? '#94A3B8' : '#64748B' }]}
+          numberOfLines={1}
+        >
           Đã tiêu: <Text style={{ color: isDark ? '#F8FAFC' : '#1E293B', fontWeight: '700' }}>{formatCurrency(spent)}</Text>
         </Text>
-        <Text style={[styles.remainingText, isOverBudget && styles.overBudgetText]}>
-          {isOverBudget ? `Vượt: ${formatCurrency(Math.abs(remaining))}` : `Còn lại: ${formatCurrency(remaining)}`}
+        <Text
+          style={[styles.remainingText, isOverBudget && styles.overBudgetText]}
+          numberOfLines={1}
+        >
+          {isOverBudget ? `Vượt: ${formatCurrency(Math.abs(remaining))}` : `Còn: ${formatCurrency(remaining)}`}
         </Text>
       </View>
     </View>
@@ -94,14 +103,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
   title: {
     fontSize: 13,
     fontWeight: '700',
+    flexShrink: 1,
   },
   percentBadge: {
     fontSize: 13,
     fontWeight: '800',
+    flexShrink: 0,
+    marginLeft: 8,
   },
   progressBarBackground: {
     height: 9,
@@ -117,14 +130,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
   },
   spentText: {
     fontSize: 12,
+    flex: 1,
   },
   remainingText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#34D399',
+    flexShrink: 0,
+    textAlign: 'right',
   },
   overBudgetText: {
     color: '#F87171',

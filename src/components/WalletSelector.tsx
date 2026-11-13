@@ -65,10 +65,13 @@ export const WalletSelector: React.FC<WalletSelectorProps> = ({
                 )}
               </View>
 
-              <Text style={[styles.walletName, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              <Text style={[styles.walletName, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
                 {w.name}
               </Text>
-              <Text style={[styles.walletBalance, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+              <Text
+                style={[styles.walletBalance, { color: isDark ? '#F8FAFC' : '#0F172A' }]}
+                numberOfLines={1}
+              >
                 {formatCurrency(balance)}
               </Text>
             </TouchableOpacity>

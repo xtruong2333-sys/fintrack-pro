@@ -7,13 +7,17 @@ interface AnimatedCounterProps {
   duration?: number;
   style?: TextStyle | TextStyle[];
   prefix?: string;
+  numberOfLines?: number;
+  adjustsFontSizeToFit?: boolean;
 }
 
 export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   value,
-  duration = 900,
+  duration = 800,
   style,
   prefix = '',
+  numberOfLines = 1,
+  adjustsFontSizeToFit = true,
 }) => {
   const [displayValue, setDisplayValue] = useState<number>(0);
   const startValueRef = useRef<number>(0);
@@ -56,7 +60,11 @@ export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   }, [value, duration]);
 
   return (
-    <Text style={style}>
+    <Text
+      style={style}
+      numberOfLines={numberOfLines}
+      adjustsFontSizeToFit={adjustsFontSizeToFit}
+    >
       {prefix}
       {formatCurrency(displayValue)}
     </Text>

@@ -109,11 +109,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    gap: 8,
   },
   titleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
   sparkleIcon: {
     width: 22,
@@ -122,11 +124,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56, 189, 248, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   title: {
     fontSize: 13,
     fontWeight: '700',
     color: '#F8FAFC',
+    flexShrink: 1,
   },
   badge: {
     flexDirection: 'row',
@@ -135,6 +139,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 10,
     gap: 5,
+    flexShrink: 0,
   },
   badgeDot: {
     width: 6,

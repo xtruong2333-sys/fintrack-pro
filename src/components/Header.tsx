@@ -31,14 +31,22 @@ export const Header: React.FC<HeaderProps> = ({
       <View style={styles.leftRow}>
         {showLogo && (
           <View style={styles.logoMargin}>
-            <AppLogo size={38} />
+            <AppLogo size={36} />
           </View>
         )}
         <View style={styles.textContainer}>
-          <Text style={[styles.dateText, { color: isDark ? '#38BDF8' : '#2563EB' }]}>
+          <Text
+            style={[styles.dateText, { color: isDark ? '#38BDF8' : '#2563EB' }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {subtitle || formatFullDate(getTodayString())}
           </Text>
-          <Text style={[styles.titleText, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+          <Text
+            style={[styles.titleText, { color: isDark ? '#F8FAFC' : '#0F172A' }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {title}
           </Text>
         </View>
@@ -59,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Ionicons
               name={isDark ? 'sunny-outline' : 'moon-outline'}
-              size={20}
+              size={18}
               color={isDark ? '#F59E0B' : '#0F172A'}
             />
           </TouchableOpacity>
@@ -79,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Ionicons
               name={rightIcon}
-              size={22}
+              size={20}
               color={isDark ? '#F8FAFC' : '#0F172A'}
             />
           </TouchableOpacity>
@@ -95,41 +103,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
+    minHeight: 64,
   },
   leftRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: 12,
   },
   logoMargin: {
     marginRight: 10,
+    flexShrink: 0,
   },
   textContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   dateText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     marginBottom: 2,
   },
   titleText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

@@ -21,7 +21,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     if (!onDelete) return;
     Alert.alert(
       'Xóa giao dịch',
-      `Bạn có chắc chắn muốn xóa "${transaction.categoryName}" (${formatCurrency(transaction.amount)}) không?`,
+      `Bạn có chắc muốn xóa "${transaction.categoryName}" (${formatCurrency(transaction.amount)})?`,
       [
         { text: 'Hủy', style: 'cancel' },
         { text: 'Xóa', style: 'destructive', onPress: () => onDelete(transaction.id) },
@@ -39,6 +39,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         },
       ]}
     >
+      {/* Category Icon */}
       <View
         style={[
           styles.iconContainer,
@@ -52,24 +53,32 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         />
       </View>
 
+      {/* Main Info Content */}
       <View style={styles.contentContainer}>
+        {/* Top Line: Category Name & Amount */}
         <View style={styles.topLine}>
           <Text
-            style={[styles.categoryName, { color: isDark ? '#F8FAFC' : '#1E293B' }]}
+            style={[styles.categoryName, { color: isDark ? '#F8FAFC' : '#0F172A' }]}
             numberOfLines={1}
+            ellipsizeMode="tail"
           >
             {transaction.categoryName}
           </Text>
-          <Text style={[styles.amountText, isIncome ? styles.incomeText : styles.expenseText]}>
+          <Text
+            style={[styles.amountText, isIncome ? styles.incomeText : styles.expenseText]}
+            numberOfLines={1}
+          >
             {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
           </Text>
         </View>
 
+        {/* Bottom Line: Note, Wallet Badge & Date */}
         <View style={styles.bottomLine}>
-          <View style={styles.noteGroup}>
+          <View style={styles.noteAndWalletGroup}>
             <Text
               style={[styles.noteText, { color: isDark ? '#94A3B8' : '#64748B' }]}
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {transaction.note || 'Không có ghi chú'}
             </Text>
@@ -80,17 +89,27 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
                   { backgroundColor: isDark ? '#1E293B' : '#EFF6FF' },
                 ]}
               >
-                <Text style={styles.walletBadgeText}>{transaction.walletName}</Text>
+                <Text style={styles.walletBadgeText} numberOfLines={1}>
+                  {transaction.walletName}
+                </Text>
               </View>
             )}
           </View>
-          <Text style={styles.dateText}>{formatDateDisplay(transaction.date)}</Text>
+
+          <Text style={[styles.dateText, { color: isDark ? '#64748B' : '#94A3B8' }]}>
+            {formatDateDisplay(transaction.date)}
+          </Text>
         </View>
       </View>
 
+      {/* Delete button */}
       {onDelete && (
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="trash-outline" size={16} color="#64748B" />
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDelete}
+          hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
+        >
+          <Ionicons name="trash-outline" size={16} color={isDark ? '#64748B' : '#94A3B8'} />
         </TouchableOpacity>
       )}
     </View>
@@ -102,7 +121,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 16,
     marginBottom: 10,
     borderWidth: 1,
@@ -113,16 +132,18 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    flexShrink: 0,
   },
   contentContainer: {
     flex: 1,
-    marginRight: 8,
+    marginRight: 6,
+    justifyContent: 'center',
   },
   topLine: {
     flexDirection: 'row',
@@ -131,14 +152,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   categoryName: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '700',
     flex: 1,
-    marginRight: 8,
+    marginRight: 10,
   },
   amountText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
+    flexShrink: 0,
+    textAlign: 'right',
   },
   incomeText: {
     color: '#34D399',
@@ -150,22 +173,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
-  noteGroup: {
+  noteAndWalletGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 8,
     gap: 6,
+    overflow: 'hidden',
   },
   noteText: {
-    fontSize: 12.5,
-    maxWidth: 130,
+    fontSize: 12,
+    flex: 1,
   },
   walletBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+    flexShrink: 0,
   },
   walletBadgeText: {
     fontSize: 10,
@@ -174,11 +199,12 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 11,
-    color: '#64748B',
     fontWeight: '500',
+    flexShrink: 0,
   },
   deleteButton: {
     padding: 6,
     marginLeft: 2,
+    flexShrink: 0,
   },
 });

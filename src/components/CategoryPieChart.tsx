@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { G, Circle, Text as SvgText } from 'react-native-svg';
+import Svg, { G, Circle } from 'react-native-svg';
 import { formatCurrency } from '../utils/formatters';
 
 interface CategoryBreakdown {
@@ -16,17 +16,29 @@ interface CategoryPieChartProps {
   data: CategoryBreakdown[];
   totalAmount: number;
   title?: string;
+  isDark?: boolean;
 }
 
 export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({
   data,
   totalAmount,
   title = 'Chi tiêu theo danh mục',
+  isDark = true,
 }) => {
   if (data.length === 0 || totalAmount === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Chưa có dữ liệu chi tiêu trong kỳ này</Text>
+      <View
+        style={[
+          styles.emptyContainer,
+          {
+            backgroundColor: isDark ? '#151D2F' : '#FFFFFF',
+            borderColor: isDark ? '#23304A' : '#E2E8F0',
+          },
+        ]}
+      >
+        <Text style={[styles.emptyText, { color: isDark ? '#64748B' : '#94A3B8' }]}>
+          Chưa có dữ liệu chi tiêu trong kỳ này
+        </Text>
       </View>
     );
   }
@@ -39,8 +51,18 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({
   let accumulatedPercent = 0;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.chartTitle}>{title}</Text>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: isDark ? '#151D2F' : '#FFFFFF',
+          borderColor: isDark ? '#23304A' : '#E2E8F0',
+        },
+      ]}
+    >
+      <Text style={[styles.chartTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+        {title}
+      </Text>
 
       <View style={styles.chartAndCenterWrapper}>
         <Svg width={size} height={size}>
@@ -50,7 +72,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke="#F1F5F9"
+              stroke={isDark ? '#1E293B' : '#F1F5F9'}
               strokeWidth={strokeWidth}
               fill="transparent"
             />
@@ -80,8 +102,14 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({
         </Svg>
 
         <View style={styles.centerLabel}>
-          <Text style={styles.centerSmallText}>Tổng cộng</Text>
-          <Text style={styles.centerAmountText} numberOfLines={1}>
+          <Text style={[styles.centerSmallText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+            Tổng cộng
+          </Text>
+          <Text
+            style={[styles.centerAmountText, { color: isDark ? '#F8FAFC' : '#0F172A' }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {formatCurrency(totalAmount)}
           </Text>
         </View>
@@ -93,13 +121,24 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({
           <View key={item.id} style={styles.legendRow}>
             <View style={styles.legendLeft}>
               <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-              <Text style={styles.categoryName} numberOfLines={1}>
+              <Text
+                style={[styles.categoryName, { color: isDark ? '#CBD5E1' : '#334155' }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {item.name}
               </Text>
             </View>
             <View style={styles.legendRight}>
-              <Text style={styles.categoryAmount}>{formatCurrency(item.amount)}</Text>
-              <Text style={styles.percentageText}>{item.percentage.toFixed(1)}%</Text>
+              <Text
+                style={[styles.categoryAmount, { color: isDark ? '#F8FAFC' : '#0F172A' }]}
+                numberOfLines={1}
+              >
+                {formatCurrency(item.amount)}
+              </Text>
+              <Text style={[styles.percentageText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                {item.percentage.toFixed(1)}%
+              </Text>
             </View>
           </View>
         ))}
@@ -110,13 +149,11 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
     marginVertical: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -124,9 +161,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   chartTitle: {
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 16,
   },
   chartAndCenterWrapper: {
@@ -143,13 +179,11 @@ const styles = StyleSheet.create({
   },
   centerSmallText: {
     fontSize: 11,
-    color: '#64748B',
     fontWeight: '500',
   },
   centerAmountText: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '800',
-    color: '#0F172A',
     marginTop: 2,
   },
   legendContainer: {
@@ -160,22 +194,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   legendLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 12,
+    marginRight: 8,
   },
   colorDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
     marginRight: 8,
+    flexShrink: 0,
   },
   categoryName: {
     fontSize: 13,
-    color: '#334155',
     fontWeight: '500',
     flex: 1,
   },
@@ -183,31 +218,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   categoryAmount: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
   },
   percentageText: {
     fontSize: 12,
-    color: '#64748B',
     fontWeight: '600',
     width: 44,
     textAlign: 'right',
   },
   emptyContainer: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 30,
     marginHorizontal: 20,
     marginVertical: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   emptyText: {
-    fontSize: 14,
-    color: '#94A3B8',
+    fontSize: 13.5,
   },
 });

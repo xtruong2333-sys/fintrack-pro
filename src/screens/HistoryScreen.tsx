@@ -145,15 +145,22 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
 
       {/* Summary Badge */}
       <View style={styles.summaryBar}>
-        <Text style={[styles.summaryCountText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+        <Text
+          style={[styles.summaryCountText, { color: isDark ? '#94A3B8' : '#64748B' }]}
+          numberOfLines={1}
+        >
           {filteredTransactions.length} giao dịch
         </Text>
         <View style={styles.summaryAmounts}>
           {filterType !== 'income' && (
-            <Text style={styles.expenseSummary}>-{formatCurrency(totalFilteredExpense)}</Text>
+            <Text style={styles.expenseSummary} numberOfLines={1}>
+              -{formatCurrency(totalFilteredExpense)}
+            </Text>
           )}
           {filterType !== 'expense' && (
-            <Text style={styles.incomeSummary}>+{formatCurrency(totalFilteredIncome)}</Text>
+            <Text style={styles.incomeSummary} numberOfLines={1}>
+              +{formatCurrency(totalFilteredIncome)}
+            </Text>
           )}
         </View>
       </View>

@@ -48,7 +48,7 @@ export const PhoneMockupWrapper: React.FC<PhoneMockupWrapperProps> = ({
           ]}
         >
           {/* Dynamic Island (Cụm tai thỏ viên thuốc của iPhone) */}
-          <View style={styles.dynamicIslandContainer}>
+          <View style={styles.dynamicIslandContainer} pointerEvents="none">
             <View style={styles.dynamicIsland}>
               <View style={styles.cameraLens} />
             </View>
@@ -60,7 +60,7 @@ export const PhoneMockupWrapper: React.FC<PhoneMockupWrapperProps> = ({
           </View>
 
           {/* Thanh gạt Home Indicator của iOS */}
-          <View style={styles.homeIndicatorContainer}>
+          <View style={styles.homeIndicatorContainer} pointerEvents="none">
             <View
               style={[
                 styles.homeIndicatorBar,
@@ -140,8 +140,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 9999,
-    // @ts-ignore
-    pointerEvents: 'none',
   },
   dynamicIsland: {
     width: 100,
@@ -172,8 +170,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 9999,
-    // @ts-ignore
-    pointerEvents: 'none',
   },
   homeIndicatorBar: {
     width: 130,
