@@ -11,18 +11,20 @@ if ($PSScriptRoot) {
 }
 
 Write-Host "--------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "[BƯỚC 1/2] Kiểm tra tài khoản Expo..." -ForegroundColor Yellow
+Write-Host "[BƯỚC 1/2] Đang kết nối tới máy chủ Expo EAS..." -ForegroundColor Yellow
 Write-Host "--------------------------------------------------------" -ForegroundColor DarkGray
+Write-Host "(Lần đầu tiên tải công cụ EAS CLI có thể mất khoảng 15-30 giây, vui lòng đợi một chút...)" -ForegroundColor Gray
+Write-Host ""
 
-$user = & npx eas-cli whoami 2>$null
-if ($LASTEXITCODE -ne 0 -or -not $user) {
+$user = & npx --yes eas-cli whoami 2>&1
+if ($LASTEXITCODE -ne 0 -or $user -match "Not logged in" -or $user -match "Authentication") {
     Write-Host "⚠️  Bạn chưa đăng nhập Expo CLI!" -ForegroundColor Red
     Write-Host "Nếu chưa có tài khoản, hãy đăng ký miễn phí tại: https://expo.dev/signup" -ForegroundColor Cyan
-    Write-Host "Đang mở màn hình đăng nhập, vui lòng nhập Email và Mật khẩu Expo của bạn..." -ForegroundColor Yellow
+    Write-Host "Đang mở màn hình đăng nhập, vui lòng nhập Email/Username và Mật khẩu Expo của bạn..." -ForegroundColor Yellow
     Write-Host ""
-    & npx eas-cli login
+    & npx --yes eas-cli login
 } else {
-    Write-Host "Đã đăng nhập tài khoản: $user" -ForegroundColor Green
+    Write-Host "✅ Đã đăng nhập tài khoản: $user" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -32,7 +34,7 @@ Write-Host "--------------------------------------------------------" -Foregroun
 Write-Host "Mã nguồn đang được nén và gửi lên máy chủ macOS của Expo để biên dịch..." -ForegroundColor Gray
 Write-Host ""
 
-& npx eas-cli build -p ios --profile preview
+& npx --yes eas-cli build -p ios --profile preview
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green
