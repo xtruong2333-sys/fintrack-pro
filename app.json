@@ -17,7 +17,9 @@
       "bundleIdentifier": "com.chitieucanhan.app",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Ứng dụng cần quyền truy cập Camera để chụp và quét hóa đơn chi tiêu.",
+        "NSPhotoLibraryUsageDescription": "Ứng dụng cần quyền Thư viện ảnh để chọn ảnh hóa đơn và biên lai thanh toán."
       }
     },
     "android": {
