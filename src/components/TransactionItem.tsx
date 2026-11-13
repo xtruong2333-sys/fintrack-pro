@@ -7,12 +7,14 @@ import { formatCurrency, formatDateDisplay } from '../utils/formatters';
 interface TransactionItemProps {
   transaction: Transaction;
   onDelete?: (id: string) => void;
+  onViewReceipt?: (transaction: Transaction) => void;
   isDark?: boolean;
 }
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   onDelete,
+  onViewReceipt,
   isDark = true,
 }) => {
   const isIncome = transaction.type === 'income';
@@ -72,7 +74,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           </Text>
         </View>
 
-        {/* Bottom Line: Note, Wallet Badge & Date */}
+        {/* Bottom Line: Note, Receipt Badge, Wallet Badge & Date */}
         <View style={styles.bottomLine}>
           <View style={styles.noteAndWalletGroup}>
             <Text
@@ -82,6 +84,19 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             >
               {transaction.note || 'Không có ghi chú'}
             </Text>
+
+            {/* Receipt Image Badge (MỤC 4) */}
+            {transaction.receiptImage && (
+              <TouchableOpacity
+                style={styles.receiptBadge}
+                onPress={() => onViewReceipt && onViewReceipt(transaction)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="image-outline" size={11} color="#38BDF8" />
+                <Text style={styles.receiptBadgeText}>Bill</Text>
+              </TouchableOpacity>
+            )}
+
             {transaction.walletName && (
               <View
                 style={[
@@ -185,6 +200,23 @@ const styles = StyleSheet.create({
   noteText: {
     fontSize: 12,
     flex: 1,
+  },
+  receiptBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+    flexShrink: 0,
+  },
+  receiptBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#38BDF8',
   },
   walletBadge: {
     paddingHorizontal: 6,

@@ -10,9 +10,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { TransactionType, Category, WalletType, Wallet } from '../types';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, WALLETS } from '../constants/categories';
 import { formatCurrency, getTodayString } from '../utils/formatters';
@@ -31,6 +33,7 @@ interface AddTransactionModalProps {
     walletName: string;
     note: string;
     date: string;
+    receiptImage?: string;
   }) => void;
   isDark?: boolean;
 }
@@ -44,9 +47,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [type, setType] = useState<TransactionType>('expense');
   const [rawAmount, setRawAmount] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<Category>(EXPENSE_CATEGORIES[0]);
-  const [selectedWallet, setSelectedWallet] = useState<Wallet>(WALLETS[1]); // Mặc định: Ngân hàng
+  const [selectedWallet, setSelectedWallet] = useState<Wallet>(WALLETS[1]);
   const [note, setNote] = useState<string>('');
   const [date, setDate] = useState<string>(getTodayString());
+  const [receiptImage, setReceiptImage] = useState<string | undefined>(undefined);
 
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
@@ -61,6 +65,23 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     const updated = current + value;
     setRawAmount(updated.toString());
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handlePickReceipt = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setReceiptImage(result.assets[0].uri);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (e) {
+      Alert.alert('Thông báo', 'Không thể mở thư viện ảnh.');
+    }
   };
 
   const handleSave = () => {
@@ -81,12 +102,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       walletName: selectedWallet.name,
       note: note.trim(),
       date,
+      receiptImage,
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     setRawAmount('');
     setNote('');
+    setReceiptImage(undefined);
     onClose();
   };
 
@@ -187,7 +210,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </View>
             </View>
 
-            {/* Quick Add Chips (Horizontal scrollable to prevent any screen crowding) */}
+            {/* Quick Add Chips */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -298,8 +321,47 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               })}
             </View>
 
-            {/* Note Input */}
+            {/* Receipt Photo Attachment Section (MỤC 4) */}
             <Text style={[styles.sectionTitle, { color: isDark ? '#F8FAFC' : '#334155' }]}>
+              Ảnh Hóa Đơn / Bill Chuyển Khoản
+            </Text>
+            {receiptImage ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: receiptImage }} style={styles.imagePreview} />
+                <TouchableOpacity
+                  style={styles.removeImageBtn}
+                  onPress={() => setReceiptImage(undefined)}
+                >
+                  <Ionicons name="trash" size={16} color="#FFFFFF" />
+                  <Text style={styles.removeImageText}>Xóa ảnh</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.uploadPhotoBtn,
+                  {
+                    backgroundColor: isDark ? '#0B0F19' : '#F8FAFC',
+                    borderColor: isDark ? '#23304A' : '#CBD5E1',
+                  },
+                ]}
+                onPress={handlePickReceipt}
+                activeOpacity={0.7}
+              >
+                <View style={styles.uploadIconCircle}>
+                  <Ionicons name="camera-outline" size={20} color="#38BDF8" />
+                </View>
+                <View>
+                  <Text style={[styles.uploadPhotoTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+                    Chọn hoặc chụp ảnh hóa đơn
+                  </Text>
+                  <Text style={styles.uploadPhotoSubtitle}>Đính kèm bill để xem lại sau này</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {/* Note Input */}
+            <Text style={[styles.sectionTitle, { color: isDark ? '#F8FAFC' : '#334155', marginTop: 16 }]}>
               Ghi Chú
             </Text>
             <TextInput
@@ -475,7 +537,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   categoryCard: {
     width: '31%',
@@ -497,6 +559,61 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  uploadPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+  },
+  uploadIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadPhotoTitle: {
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
+  uploadPhotoSubtitle: {
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    borderRadius: 16,
+    overflow: 'hidden',
+    height: 140,
+    backgroundColor: '#0F172A',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.85)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  removeImageText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   noteInput: {
     borderRadius: 14,

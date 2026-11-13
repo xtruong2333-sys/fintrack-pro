@@ -10,13 +10,16 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Transaction, AppSettings, ThemeMode } from './src/types';
+import { Transaction, AppSettings, ThemeMode, RecurringBill, SavingsGoal } from './src/types';
 import { StorageService } from './src/services/storage';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { AddTransactionModal } from './src/components/AddTransactionModal';
+import { AddRecurringBillModal } from './src/components/AddRecurringBillModal';
+import { AddSavingsGoalModal } from './src/components/AddSavingsGoalModal';
+import { ReceiptViewerModal } from './src/components/ReceiptViewerModal';
 import { PhoneMockupWrapper } from './src/components/PhoneMockupWrapper';
 import { AnimatedSplashScreen } from './src/components/AnimatedSplashScreen';
 import { OnboardingModal } from './src/components/OnboardingModal';
@@ -32,6 +35,8 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [recurringBills, setRecurringBills] = useState<RecurringBill[]>([]);
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [budget, setBudget] = useState<number>(DEFAULT_BUDGET);
   const [settings, setSettings] = useState<AppSettings>({
     theme: 'dark',
@@ -39,20 +44,36 @@ export default function App() {
     pinCode: '1234',
     hasSeenOnboarding: false,
   });
+
+  // Modals state
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isAddBillModalVisible, setIsAddBillModalVisible] = useState(false);
+  const [isAddGoalModalVisible, setIsAddGoalModalVisible] = useState(false);
+  const [viewingReceiptTx, setViewingReceiptTx] = useState<Transaction | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Load data from local storage
+  // Load all app data from local storage
   const loadData = useCallback(async () => {
     try {
-      const [storedTransactions, storedBudget, storedSettings] = await Promise.all([
+      const [
+        storedTransactions,
+        storedBudget,
+        storedSettings,
+        storedBills,
+        storedGoals,
+      ] = await Promise.all([
         StorageService.getTransactions(),
         StorageService.getBudget(),
         StorageService.getSettings(),
+        StorageService.getRecurringBills(),
+        StorageService.getSavingsGoals(),
       ]);
+
       setTransactions(storedTransactions);
       setBudget(storedBudget);
       setSettings(storedSettings);
+      setRecurringBills(storedBills);
+      setSavingsGoals(storedGoals);
 
       // Check security & onboarding
       if (storedSettings.pinEnabled) {
@@ -76,6 +97,7 @@ export default function App() {
     setRefreshing(false);
   };
 
+  // --- TRANSACTIONS ---
   const handleAddTransaction = async (data: any) => {
     const newTx = await StorageService.addTransaction(data);
     setTransactions((prev) => [newTx, ...prev]);
@@ -86,6 +108,48 @@ export default function App() {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
+  // --- RECURRING BILLS (MỤC 2) ---
+  const handleAddRecurringBill = async (billData: any) => {
+    const newBill = await StorageService.addRecurringBill(billData);
+    setRecurringBills((prev) => [...prev, newBill]);
+  };
+
+  const handlePayBill = async (billId: string) => {
+    const res = await StorageService.payRecurringBill(billId);
+    if (res) {
+      setRecurringBills((prev) =>
+        prev.map((b) => (b.id === billId ? res.bill : b))
+      );
+      setTransactions((prev) => [res.tx, ...prev]);
+    }
+  };
+
+  const handleDeleteBill = async (billId: string) => {
+    await StorageService.deleteRecurringBill(billId);
+    setRecurringBills((prev) => prev.filter((b) => b.id !== billId));
+  };
+
+  // --- SAVINGS GOALS (MỤC 1) ---
+  const handleAddSavingsGoal = async (goalData: any) => {
+    const newGoal = await StorageService.addSavingsGoal(goalData);
+    setSavingsGoals((prev) => [...prev, newGoal]);
+  };
+
+  const handleDepositGoal = async (goalId: string, amount: number) => {
+    const updatedGoal = await StorageService.depositSavingsGoal(goalId, amount);
+    if (updatedGoal) {
+      setSavingsGoals((prev) =>
+        prev.map((g) => (g.id === goalId ? updatedGoal : g))
+      );
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    await StorageService.deleteSavingsGoal(goalId);
+    setSavingsGoals((prev) => prev.filter((g) => g.id !== goalId));
+  };
+
+  // --- BUDGET & SETTINGS ---
   const handleUpdateBudget = async (newBudget: number) => {
     await StorageService.setBudget(newBudget);
     setBudget(newBudget);
@@ -105,12 +169,16 @@ export default function App() {
   const handleClearData = async () => {
     await StorageService.clearAllData();
     setTransactions([]);
+    setRecurringBills([]);
+    setSavingsGoals([]);
     setBudget(DEFAULT_BUDGET);
   };
 
   const handleResetSampleData = async () => {
     const samples = await StorageService.resetToSampleData();
-    setTransactions(samples);
+    setTransactions(samples.transactions);
+    setRecurringBills(samples.bills);
+    setSavingsGoals(samples.goals);
     setBudget(DEFAULT_BUDGET);
   };
 
@@ -160,11 +228,20 @@ export default function App() {
           {activeTab === 'home' && (
             <HomeScreen
               transactions={transactions}
+              recurringBills={recurringBills}
+              savingsGoals={savingsGoals}
               budget={budget}
               theme={settings.theme}
               onToggleTheme={handleToggleTheme}
               onOpenAddModal={() => setIsAddModalVisible(true)}
+              onOpenAddBillModal={() => setIsAddBillModalVisible(true)}
+              onOpenAddGoalModal={() => setIsAddGoalModalVisible(true)}
+              onPayBill={handlePayBill}
+              onDeleteBill={handleDeleteBill}
+              onDepositGoal={handleDepositGoal}
+              onDeleteGoal={handleDeleteGoal}
               onDeleteTransaction={handleDeleteTransaction}
+              onViewReceipt={(tx) => setViewingReceiptTx(tx)}
               onNavigateToHistory={() => setActiveTab('history')}
               onRefresh={handleRefresh}
               refreshing={refreshing}
@@ -185,6 +262,7 @@ export default function App() {
               theme={settings.theme}
               onToggleTheme={handleToggleTheme}
               onDeleteTransaction={handleDeleteTransaction}
+              onViewReceipt={(tx) => setViewingReceiptTx(tx)}
               onOpenAddModal={() => setIsAddModalVisible(true)}
             />
           )}
@@ -200,6 +278,7 @@ export default function App() {
               onUpdateSettings={handleUpdateSettings}
               onClearData={handleClearData}
               onResetSampleData={handleResetSampleData}
+              onReloadAllData={loadData}
               onShowOnboarding={() => setShowOnboarding(true)}
             />
           )}
@@ -323,12 +402,35 @@ export default function App() {
           </View>
         </View>
 
-        {/* Add Transaction Modal */}
+        {/* Add Transaction Modal (with Receipt Photo support - MỤC 4) */}
         <AddTransactionModal
           visible={isAddModalVisible}
           onClose={() => setIsAddModalVisible(false)}
           onAdd={handleAddTransaction}
           isDark={isDark}
+        />
+
+        {/* Add Recurring Bill Modal (MỤC 2) */}
+        <AddRecurringBillModal
+          visible={isAddBillModalVisible}
+          onClose={() => setIsAddBillModalVisible(false)}
+          onAdd={handleAddRecurringBill}
+          isDark={isDark}
+        />
+
+        {/* Add Savings Goal Modal (MỤC 1) */}
+        <AddSavingsGoalModal
+          visible={isAddGoalModalVisible}
+          onClose={() => setIsAddGoalModalVisible(false)}
+          onAdd={handleAddSavingsGoal}
+          isDark={isDark}
+        />
+
+        {/* Receipt Fullscreen Viewer Modal (MỤC 4) */}
+        <ReceiptViewerModal
+          visible={!!viewingReceiptTx}
+          transaction={viewingReceiptTx}
+          onClose={() => setViewingReceiptTx(null)}
         />
       </SafeAreaView>
     </PhoneMockupWrapper>

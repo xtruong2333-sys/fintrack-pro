@@ -19,6 +19,7 @@ interface HistoryScreenProps {
   theme: ThemeMode;
   onToggleTheme: () => void;
   onDeleteTransaction: (id: string) => void;
+  onViewReceipt: (transaction: Transaction) => void;
   onOpenAddModal: () => void;
 }
 
@@ -27,6 +28,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   theme,
   onToggleTheme,
   onDeleteTransaction,
+  onViewReceipt,
   onOpenAddModal,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -180,6 +182,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
               key={tx.id}
               transaction={tx}
               onDelete={onDeleteTransaction}
+              onViewReceipt={onViewReceipt}
               isDark={isDark}
             />
           ))

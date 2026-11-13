@@ -8,21 +8,32 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Transaction, WalletType, ThemeMode } from '../types';
+import { Transaction, WalletType, ThemeMode, RecurringBill, SavingsGoal } from '../types';
 import { Header } from '../components/Header';
 import { BalanceCard } from '../components/BalanceCard';
 import { BudgetProgress } from '../components/BudgetProgress';
 import { WalletSelector } from '../components/WalletSelector';
 import { FinancialInsightCard } from '../components/FinancialInsightCard';
+import { RecurringBillsSection } from '../components/RecurringBillsSection';
+import { SavingsGoalsSection } from '../components/SavingsGoalsSection';
 import { TransactionItem } from '../components/TransactionItem';
 
 interface HomeScreenProps {
   transactions: Transaction[];
+  recurringBills: RecurringBill[];
+  savingsGoals: SavingsGoal[];
   budget: number;
   theme: ThemeMode;
   onToggleTheme: () => void;
   onOpenAddModal: () => void;
+  onOpenAddBillModal: () => void;
+  onOpenAddGoalModal: () => void;
+  onPayBill: (billId: string) => void;
+  onDeleteBill: (billId: string) => void;
+  onDepositGoal: (goalId: string, amount: number) => void;
+  onDeleteGoal: (goalId: string) => void;
   onDeleteTransaction: (id: string) => void;
+  onViewReceipt: (transaction: Transaction) => void;
   onNavigateToHistory: () => void;
   onRefresh: () => void;
   refreshing: boolean;
@@ -30,11 +41,20 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   transactions,
+  recurringBills,
+  savingsGoals,
   budget,
   theme,
   onToggleTheme,
   onOpenAddModal,
+  onOpenAddBillModal,
+  onOpenAddGoalModal,
+  onPayBill,
+  onDeleteBill,
+  onDepositGoal,
+  onDeleteGoal,
   onDeleteTransaction,
+  onViewReceipt,
   onNavigateToHistory,
   onRefresh,
   refreshing,
@@ -42,7 +62,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [selectedWallet, setSelectedWallet] = useState<WalletType | 'all'>('all');
   const isDark = theme === 'dark';
 
-  // Lọc theo ví nếu được chọn
   const displayTransactions =
     selectedWallet === 'all'
       ? transactions
@@ -93,6 +112,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {/* Budget Progress Bar */}
         <BudgetProgress spent={expense} budget={budget} isDark={isDark} />
 
+        {/* MỤC 2: Hóa Đơn & Đăng Ký Định Kỳ */}
+        <RecurringBillsSection
+          bills={recurringBills}
+          onPayBill={onPayBill}
+          onOpenAddModal={onOpenAddBillModal}
+          onDeleteBill={onDeleteBill}
+          isDark={isDark}
+        />
+
+        {/* MỤC 1: Hũ Tiết Kiệm & Mục Tiêu */}
+        <SavingsGoalsSection
+          goals={savingsGoals}
+          onDeposit={onDepositGoal}
+          onOpenAddModal={onOpenAddGoalModal}
+          onDeleteGoal={onDeleteGoal}
+          isDark={isDark}
+        />
+
         {/* Quick Add Action Banner */}
         <TouchableOpacity
           style={[
@@ -119,7 +156,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 Ghi chép giao dịch mới
               </Text>
               <Text style={[styles.bannerSubtitle, { color: isDark ? '#94A3B8' : '#3B82F6' }]}>
-                Chọn nguồn ví và thêm chi tiêu siêu tốc
+                Kèm ảnh bill & chọn nguồn ví tức thì
               </Text>
             </View>
           </View>
@@ -166,6 +203,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 key={tx.id}
                 transaction={tx}
                 onDelete={onDeleteTransaction}
+                onViewReceipt={onViewReceipt}
                 isDark={isDark}
               />
             ))}

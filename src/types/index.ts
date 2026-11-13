@@ -31,6 +31,41 @@ export interface Transaction {
   note: string;
   date: string; // ISO string YYYY-MM-DD
   createdAt: number; // timestamp
+  receiptImage?: string; // Base64 or URI of receipt photo
+}
+
+export interface RecurringBill {
+  id: string;
+  name: string;
+  amount: number;
+  dueDay: number; // Ngày trong tháng: 1 - 31
+  categoryId: string;
+  categoryName: string;
+  categoryIcon: string;
+  categoryColor: string;
+  walletId: WalletType;
+  walletName: string;
+  isPaidThisMonth: boolean;
+  lastPaidDate?: string; // YYYY-MM-DD
+  note?: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  icon: string;
+  color: string;
+  deadline?: string; // YYYY-MM-DD
+}
+
+export interface MonthlyTrend {
+  monthKey: string; // "2026-06"
+  monthLabel: string; // "T6", "T7", ...
+  income: number;
+  expense: number;
+  savings: number;
 }
 
 export interface BudgetConfig {

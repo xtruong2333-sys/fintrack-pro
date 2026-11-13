@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Transaction, ThemeMode } from '../types';
 import { Header } from '../components/Header';
 import { CategoryPieChart } from '../components/CategoryPieChart';
+import { MonthlyTrendChart } from '../components/MonthlyTrendChart';
 
 interface AnalyticsScreenProps {
   transactions: Transaction[];
@@ -62,6 +63,9 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* MỤC 3: Biểu đồ xu hướng thu chi 6 tháng */}
+        <MonthlyTrendChart transactions={transactions} isDark={isDark} />
+
         {/* Type Toggle */}
         <View
           style={[

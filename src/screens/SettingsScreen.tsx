@@ -8,6 +8,9 @@ import {
   TextInput,
   Switch,
   Alert,
+  Platform,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -15,6 +18,7 @@ import { Header } from '../components/Header';
 import { ThemeMode, AppSettings, Transaction } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { exportTransactionsToCSV } from '../utils/csvExporter';
+import { StorageService } from '../services/storage';
 
 interface SettingsScreenProps {
   budget: number;
@@ -26,6 +30,7 @@ interface SettingsScreenProps {
   onUpdateSettings: (partial: Partial<AppSettings>) => void;
   onClearData: () => void;
   onResetSampleData: () => void;
+  onReloadAllData: () => void;
   onShowOnboarding: () => void;
 }
 
@@ -39,10 +44,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onUpdateSettings,
   onClearData,
   onResetSampleData,
+  onReloadAllData,
   onShowOnboarding,
 }) => {
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState(budget.toString());
+  const [restoreModalVisible, setRestoreModalVisible] = useState(false);
+  const [restoreJSON, setRestoreJSON] = useState('');
   const isDark = theme === 'dark';
 
   const handleSaveBudget = () => {
@@ -67,10 +75,55 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     }
   };
 
+  // MỤC 5: Tạo tệp sao lưu dữ liệu JSON
+  const handleExportBackup = async () => {
+    try {
+      const backupStr = await StorageService.createFullBackupJSON();
+      if (Platform.OS === 'web') {
+        const blob = new Blob([backupStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `FinTrack_Backup_${new Date().toISOString().split('T')[0]}.json`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        Alert.alert('Thành công', 'Đã tải tệp sao lưu FinTrack_Backup.json về máy tính!');
+      } else {
+        Alert.alert(
+          'Sao lưu hoàn tất',
+          'Dữ liệu đã được nén thành chuỗi sao lưu JSON bảo mật. Bạn có thể dùng chuỗi này để khôi phục khi đổi máy.'
+        );
+      }
+    } catch (e) {
+      Alert.alert('Lỗi', 'Không thể tạo bản sao lưu.');
+    }
+  };
+
+  // MỤC 5: Khôi phục dữ liệu
+  const handleConfirmRestore = async () => {
+    if (!restoreJSON.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng dán nội dung mã tệp sao lưu JSON.');
+      return;
+    }
+
+    const success = await StorageService.restoreFromBackupJSON(restoreJSON);
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Khôi phục thành công! 🎉', 'Toàn bộ dữ liệu của bạn đã được phục hồi hoàn chỉnh.');
+      setRestoreModalVisible(false);
+      setRestoreJSON('');
+      onReloadAllData();
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Lỗi khôi phục', 'Dữ liệu JSON không hợp lệ hoặc đã bị lỗi định dạng.');
+    }
+  };
+
   const handleConfirmClear = () => {
     Alert.alert(
       'Xóa toàn bộ dữ liệu?',
-      'Hành động này sẽ xóa tất cả giao dịch và thiết lập. Không thể hoàn tác!',
+      'Hành động này sẽ xóa tất cả giao dịch, hóa đơn và mục tiêu. Không thể hoàn tác!',
       [
         { text: 'Hủy bỏ', style: 'cancel' },
         {
@@ -254,6 +307,42 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
           <View style={[styles.divider, { backgroundColor: cardBorder }]} />
 
+          {/* MỤC 5: Sao lưu đám mây JSON */}
+          <TouchableOpacity style={styles.actionRow} onPress={handleExportBackup}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="cloud-upload-outline" size={20} color="#34D399" />
+              <View>
+                <Text style={[styles.settingLabel, { color: textPrimary, fontWeight: '700' }]}>
+                  Sao Lưu Dữ Liệu (.JSON)
+                </Text>
+                <Text style={[styles.settingSubLabel, { color: textSecondary }]}>
+                  Xuất toàn bộ sổ thu chi để dự phòng
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="download-outline" size={18} color="#34D399" />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: cardBorder }]} />
+
+          {/* MỤC 5: Khôi phục đám mây JSON */}
+          <TouchableOpacity style={styles.actionRow} onPress={() => setRestoreModalVisible(true)}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="cloud-download-outline" size={20} color="#F59E0B" />
+              <View>
+                <Text style={[styles.settingLabel, { color: textPrimary, fontWeight: '700' }]}>
+                  Khôi Phục Dữ Liệu Từ Bản Sao Lưu
+                </Text>
+                <Text style={[styles.settingSubLabel, { color: textSecondary }]}>
+                  Nạp lại sổ sách khi đổi điện thoại mới
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={textSecondary} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: cardBorder }]} />
+
           {/* Re-play Intro */}
           <TouchableOpacity style={styles.actionRow} onPress={onShowOnboarding}>
             <View style={styles.settingLeft}>
@@ -298,14 +387,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
           <View style={styles.settingRow}>
             <Text style={[styles.infoLabel, { color: textSecondary }]}>Tên ứng dụng</Text>
-            <Text style={[styles.infoValue, { color: textPrimary }]}>FinTrack Pro - Sổ Thu Chi</Text>
+            <Text style={[styles.infoValue, { color: textPrimary }]}>FinTrack Pro</Text>
           </View>
 
           <View style={[styles.divider, { backgroundColor: cardBorder }]} />
 
           <View style={styles.settingRow}>
             <Text style={[styles.infoLabel, { color: textSecondary }]}>Phiên bản</Text>
-            <Text style={[styles.infoValue, { color: textPrimary }]}>2.0.0 (Pro Edition)</Text>
+            <Text style={[styles.infoValue, { color: textPrimary }]}>2.5.0 (Ultimate Edition)</Text>
           </View>
 
           <View style={[styles.divider, { backgroundColor: cardBorder }]} />
@@ -318,6 +407,67 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </View>
         </View>
       </ScrollView>
+
+      {/* MỤC 5: Modal Khôi phục dữ liệu sao lưu */}
+      <Modal visible={restoreModalVisible} transparent animationType="slide">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View
+            style={[
+              styles.restoreModalCard,
+              { backgroundColor: isDark ? '#151D2F' : '#FFFFFF' },
+            ]}
+          >
+            <Text style={[styles.restoreModalTitle, { color: textPrimary }]}>
+              Khôi Phục Dữ Liệu Sao Lưu
+            </Text>
+            <Text style={[styles.restoreModalDesc, { color: textSecondary }]}>
+              Dán nội dung JSON từ tệp sao lưu FinTrack_Backup.json của bạn vào khung bên dưới:
+            </Text>
+
+            <TextInput
+              style={[
+                styles.restoreInput,
+                {
+                  backgroundColor: isDark ? '#0B0F19' : '#F8FAFC',
+                  borderColor: isDark ? '#23304A' : '#CBD5E1',
+                  color: textPrimary,
+                },
+              ]}
+              multiline
+              numberOfLines={6}
+              placeholder='Dán nội dung {"version": "2.0.0", "data": ...}'
+              placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+              value={restoreJSON}
+              onChangeText={setRestoreJSON}
+            />
+
+            <View style={styles.restoreActions}>
+              <TouchableOpacity
+                style={[
+                  styles.restoreCancelBtn,
+                  { backgroundColor: isDark ? '#1E293B' : '#E2E8F0' },
+                ]}
+                onPress={() => {
+                  setRestoreModalVisible(false);
+                  setRestoreJSON('');
+                }}
+              >
+                <Text style={{ color: textSecondary, fontWeight: '700' }}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.restoreSubmitBtn}
+                onPress={handleConfirmRestore}
+              >
+                <Text style={styles.restoreSubmitBtnText}>Khôi phục ngay</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
@@ -435,6 +585,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   settingLabel: {
     fontSize: 14,
@@ -460,5 +611,63 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(7, 11, 20, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  restoreModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 22,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#23304A',
+  },
+  restoreModalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  restoreModalDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  restoreInput: {
+    height: 110,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    fontSize: 12,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  restoreActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  restoreCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  restoreSubmitBtn: {
+    flex: 2,
+    backgroundColor: '#2563EB',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  restoreSubmitBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13.5,
   },
 });
