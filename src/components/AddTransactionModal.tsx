@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { TransactionType, Category, WalletType, Wallet } from '../types';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, WALLETS } from '../constants/categories';
 import { formatCurrency, getTodayString } from '../utils/formatters';
+import { OCRService, CandidateAmount } from '../services/ocrService';
 
 interface AddTransactionModalProps {
   visible: boolean;
@@ -55,6 +56,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   // Trạng thái quét hóa đơn OCR bằng AI
   const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [candidateList, setCandidateList] = useState<CandidateAmount[]>([]);
   const [detectedAmounts, setDetectedAmounts] = useState<number[]>([]);
   const scanLineAnim = useRef(new Animated.Value(0)).current;
 
@@ -89,56 +91,126 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           useNativeDriver: true,
         }),
       ]),
-      { iterations: 2 }
+      { iterations: 3 }
     ).start();
   };
 
-  // Chọn ảnh và thực hiện quét số tiền AI thông minh
-  const handlePickReceipt = async () => {
+  // Xử lý ảnh hóa đơn thực tế qua bộ nhận diện OCR
+  const processReceiptImage = async (imageUri: string, base64?: string | null) => {
+    setReceiptImage(imageUri);
+    setIsScanning(true);
+    startScanAnimation();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+      const ocrResult = await OCRService.scanReceipt(imageUri, base64 || undefined);
+      setIsScanning(false);
+
+      if (ocrResult.success && ocrResult.totalAmount > 0) {
+        setRawAmount(ocrResult.totalAmount.toString());
+        setCandidateList(ocrResult.candidates);
+        setDetectedAmounts(ocrResult.detectedAmounts);
+
+        // Tự động điền ghi chú nhận diện từ hóa đơn
+        if (ocrResult.suggestedNote && (!note || note.startsWith('Hóa đơn'))) {
+          setNote(ocrResult.suggestedNote);
+        }
+
+        // Tự động chọn danh mục phù hợp
+        if (ocrResult.suggestedCategoryId) {
+          const matchedCat = categories.find((c) => c.id === ocrResult.suggestedCategoryId);
+          if (matchedCat) {
+            setSelectedCategory(matchedCat);
+          }
+        }
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        setCandidateList([]);
+        setDetectedAmounts([]);
+        Alert.alert(
+          'Không tìm thấy số tiền rõ ràng',
+          'Ảnh hóa đơn có thể bị mờ hoặc không có số tiền rõ ràng. Bạn vui lòng tự nhập số tiền hoặc chụp lại góc thẳng hơn nhé.'
+        );
+      }
+    } catch (err) {
+      console.warn('OCR Scan error:', err);
+      setIsScanning(false);
+      Alert.alert(
+        'Lỗi quét hóa đơn',
+        'Không thể kết nối đến máy chủ phân tích hóa đơn. Bạn vui lòng tự nhập số tiền.'
+      );
+    }
+  };
+
+  // Chụp ảnh mới từ camera
+  const handleTakePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Quyền truy cập Camera',
+          'Vui lòng cấp quyền Camera trong Cài đặt thiết bị để chụp ảnh hóa đơn.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        quality: 0.7,
+        quality: 0.6,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const imageUri = result.assets[0].uri;
-        setReceiptImage(imageUri);
-        setIsScanning(true);
-        startScanAnimation();
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-        // Giả lập quét AI nhận diện văn bản OCR và trích xuất số tiền từ hóa đơn
-        setTimeout(() => {
-          setIsScanning(false);
-
-          // Thuật toán phát hiện các con số thanh toán phổ biến trên hóa đơn
-          // (VD: Tiền đồ ăn uống / cafe / siêu thị phổ biến)
-          const sampleDetections = [185000, 245000, 350000, 480000, 120000];
-          // Lấy ngẫu nhiên một con số thực tế
-          const extractedTotal = sampleDetections[Math.floor(Math.random() * sampleDetections.length)];
-          const subTotal = Math.round(extractedTotal * 0.9);
-          const tax = extractedTotal - subTotal;
-
-          const candidates = [extractedTotal, subTotal, tax].filter((v) => v > 0);
-          setDetectedAmounts(candidates);
-
-          // TỰ ĐỘNG ĐIỀN SỐ TIỀN VÀO Ô INPUT!
-          setRawAmount(extractedTotal.toString());
-
-          // Tự động điền ghi chú thông minh
-          if (!note) {
-            setNote('Hóa đơn thanh toán (Đã quét AI)');
-          }
-
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }, 1500);
+        await processReceiptImage(result.assets[0].uri, result.assets[0].base64);
       }
     } catch (e) {
+      console.warn('Camera launch error:', e);
+      Alert.alert('Thông báo', 'Không thể khởi động camera.');
+      setIsScanning(false);
+    }
+  };
+
+  // Chọn ảnh có sẵn từ thư viện
+  const handlePickFromLibrary = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Quyền truy cập Thư viện',
+          'Vui lòng cấp quyền truy cập Thư viện ảnh để chọn hóa đơn.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.6,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        await processReceiptImage(result.assets[0].uri, result.assets[0].base64);
+      }
+    } catch (e) {
+      console.warn('Library launch error:', e);
       Alert.alert('Thông báo', 'Không thể mở thư viện ảnh.');
       setIsScanning(false);
     }
+  };
+
+  // Hộp thoại lựa chọn nguồn ảnh
+  const handleSelectReceiptSource = () => {
+    Alert.alert(
+      'Quét Hóa Đơn Bằng AI',
+      'Bạn muốn chụp ảnh trực tiếp hay chọn ảnh hóa đơn từ thư viện?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'Chụp ảnh mới', onPress: handleTakePhoto },
+        { text: 'Thư viện ảnh', onPress: handlePickFromLibrary },
+      ]
+    );
   };
 
   const handleSave = () => {
@@ -168,6 +240,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setNote('');
     setReceiptImage(undefined);
     setDetectedAmounts([]);
+    setCandidateList([]);
     onClose();
   };
 
@@ -238,7 +311,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 )}
 
                 {/* Detected success tag */}
-                {!isScanning && (
+                {!isScanning && parseInt(rawAmount || '0', 10) > 0 && (
                   <View style={styles.detectedSuccessTag}>
                     <Ionicons name="checkmark-circle" size={14} color="#10B981" />
                     <Text style={styles.detectedSuccessText}>
@@ -253,6 +326,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   onPress={() => {
                     setReceiptImage(undefined);
                     setDetectedAmounts([]);
+                    setCandidateList([]);
                   }}
                 >
                   <Ionicons name="trash" size={14} color="#FFFFFF" />
@@ -260,7 +334,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity
+              <View
                 style={[
                   styles.uploadPhotoBtn,
                   {
@@ -268,32 +342,128 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     borderColor: isDark ? '#23304A' : '#CBD5E1',
                   },
                 ]}
-                onPress={handlePickReceipt}
-                activeOpacity={0.7}
               >
-                <View style={styles.uploadIconCircle}>
-                  <Ionicons name="camera-outline" size={22} color="#38BDF8" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.uploadTitleRow}>
-                    <Text style={[styles.uploadPhotoTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
-                      Chụp hoặc chọn ảnh hóa đơn
-                    </Text>
-                    <View style={styles.ocrTag}>
-                      <Text style={styles.ocrTagText}>TỰ QUÉT TIỀN</Text>
-                    </View>
+                <TouchableOpacity
+                  style={styles.uploadCardMain}
+                  onPress={handleSelectReceiptSource}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.uploadIconCircle}>
+                    <Ionicons name="scan-outline" size={22} color="#38BDF8" />
                   </View>
-                  <Text style={styles.uploadPhotoSubtitle}>
-                    AI sẽ tự nhận diện số tiền, bạn chỉ cần chọn danh mục!
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.uploadTitleRow}>
+                      <Text style={[styles.uploadPhotoTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+                        Quét Hóa Đơn Tự Động
+                      </Text>
+                      <View style={styles.ocrTag}>
+                        <Text style={styles.ocrTagText}>AI OCR THẬT</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.uploadPhotoSubtitle}>
+                      Tự động đọc số tiền thật từ hóa đơn, bạn chỉ cần chọn danh mục!
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* 2 Nút thao tác nhanh: Chụp ngay & Chọn từ thư viện */}
+                <View
+                  style={[
+                    styles.uploadActionButtonsRow,
+                    { borderTopColor: isDark ? '#1E293B' : '#E2E8F0' },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.uploadActionPill,
+                      { backgroundColor: isDark ? '#1E293B' : '#EDF2F7' },
+                    ]}
+                    onPress={handleTakePhoto}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="camera" size={15} color="#38BDF8" />
+                    <Text
+                      style={[
+                        styles.uploadActionPillText,
+                        { color: isDark ? '#F8FAFC' : '#0F172A' },
+                      ]}
+                    >
+                      Chụp camera
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.uploadActionPill,
+                      { backgroundColor: isDark ? '#1E293B' : '#EDF2F7' },
+                    ]}
+                    onPress={handlePickFromLibrary}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="images" size={15} color="#10B981" />
+                    <Text
+                      style={[
+                        styles.uploadActionPillText,
+                        { color: isDark ? '#F8FAFC' : '#0F172A' },
+                      ]}
+                    >
+                      Thư viện ảnh
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
+              </View>
             )}
 
-            {/* Các số tiền AI nhận diện được (để chọn nhanh nếu hóa đơn có nhiều số) */}
-            {detectedAmounts.length > 0 && (
+            {/* Các số tiền AI nhận diện được từ hóa đơn (bấm để đổi nhanh nếu cần) */}
+            {candidateList.length > 0 ? (
               <View style={styles.detectedBox}>
-                <Text style={styles.detectedBoxLabel}>Số tiền nhận diện từ hóa đơn (bấm để chọn):</Text>
+                <View style={styles.detectedBoxHeader}>
+                  <Ionicons name="sparkles" size={13} color="#38BDF8" />
+                  <Text style={styles.detectedBoxLabel}>
+                    Số tiền trích xuất từ hóa đơn (chạm để chọn lại nếu cần):
+                  </Text>
+                </View>
+                <View style={styles.detectedChipsRow}>
+                  {candidateList.map((cand, idx) => {
+                    const isSelected = rawAmount === cand.amount.toString();
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[
+                          styles.detectedChip,
+                          isSelected && styles.detectedChipActive,
+                        ]}
+                        onPress={() => {
+                          setRawAmount(cand.amount.toString());
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                      >
+                        <Ionicons
+                          name={isSelected ? 'checkmark-circle' : 'cash-outline'}
+                          size={13}
+                          color={isSelected ? '#FFFFFF' : '#38BDF8'}
+                        />
+                        <Text
+                          style={[
+                            styles.detectedChipText,
+                            isSelected && styles.detectedChipTextActive,
+                          ]}
+                        >
+                          {cand.label}: {formatCurrency(cand.amount)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : detectedAmounts.length > 0 ? (
+              <View style={styles.detectedBox}>
+                <View style={styles.detectedBoxHeader}>
+                  <Ionicons name="sparkles" size={13} color="#38BDF8" />
+                  <Text style={styles.detectedBoxLabel}>
+                    Số tiền trích xuất từ hóa đơn (chạm để chọn lại nếu cần):
+                  </Text>
+                </View>
                 <View style={styles.detectedChipsRow}>
                   {detectedAmounts.map((amt, idx) => (
                     <TouchableOpacity
@@ -324,7 +494,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   ))}
                 </View>
               </View>
-            )}
+            ) : null}
 
             {/* Segmented Type Controller */}
             <View
@@ -619,14 +789,43 @@ const styles = StyleSheet.create({
     color: '#38BDF8',
   },
   uploadPhotoBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
     borderRadius: 16,
+    padding: 14,
     borderWidth: 1.5,
     borderStyle: 'dashed',
     marginBottom: 16,
+  },
+  uploadCardMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  uploadActionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  uploadActionPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  uploadActionPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  detectedBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
   },
   uploadIconCircle: {
     width: 44,
