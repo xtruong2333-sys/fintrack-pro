@@ -111,8 +111,26 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         setCandidateList(ocrResult.candidates);
         setDetectedAmounts(ocrResult.detectedAmounts);
 
+        // Tự động nhận diện loại giao dịch (Thu / Chi)
+        if (ocrResult.suggestedType) {
+          setType(ocrResult.suggestedType);
+        }
+
+        // Tự động chọn ví phù hợp (Biên lai chuyển khoản -> Ví Ngân hàng)
+        if (ocrResult.suggestedWalletId) {
+          const matchedWallet = WALLETS.find((w) => w.id === ocrResult.suggestedWalletId);
+          if (matchedWallet) {
+            setSelectedWallet(matchedWallet);
+          }
+        }
+
+        // Tự động điền ngày giao dịch từ biên lai nếu tìm thấy
+        if (ocrResult.suggestedDate) {
+          setDate(ocrResult.suggestedDate);
+        }
+
         // Tự động điền ghi chú nhận diện từ hóa đơn
-        if (ocrResult.suggestedNote && (!note || note.startsWith('Hóa đơn'))) {
+        if (ocrResult.suggestedNote && (!note || note.startsWith('Hóa đơn') || note.startsWith('Chuyển'))) {
           setNote(ocrResult.suggestedNote);
         }
 
