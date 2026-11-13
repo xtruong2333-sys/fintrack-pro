@@ -6,30 +6,44 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Switch,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Header } from '../components/Header';
+import { ThemeMode, AppSettings, Transaction } from '../types';
 import { formatCurrency } from '../utils/formatters';
+import { exportTransactionsToCSV } from '../utils/csvExporter';
 
 interface SettingsScreenProps {
   budget: number;
-  transactionCount: number;
+  transactions: Transaction[];
+  settings: AppSettings;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
   onUpdateBudget: (newBudget: number) => void;
+  onUpdateSettings: (partial: Partial<AppSettings>) => void;
   onClearData: () => void;
   onResetSampleData: () => void;
+  onShowOnboarding: () => void;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   budget,
-  transactionCount,
+  transactions,
+  settings,
+  theme,
+  onToggleTheme,
   onUpdateBudget,
+  onUpdateSettings,
   onClearData,
   onResetSampleData,
+  onShowOnboarding,
 }) => {
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState(budget.toString());
+  const isDark = theme === 'dark';
 
   const handleSaveBudget = () => {
     const val = parseInt(budgetInput.replace(/[^0-9]/g, ''), 10);
@@ -41,6 +55,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     setEditingBudget(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert('Thành công', `Đã cập nhật hạn mức ngân sách tháng: ${formatCurrency(val)}`);
+  };
+
+  const handleTogglePin = (value: boolean) => {
+    onUpdateSettings({ pinEnabled: value });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (value) {
+      Alert.alert('Đã bật mã PIN', 'Mã PIN bảo mật mặc định là 1234. Lần mở app tới hệ thống sẽ yêu cầu nhập mã.');
+    } else {
+      Alert.alert('Đã tắt mã PIN', 'Ứng dụng sẽ mở trực tiếp không cần nhập mã.');
+    }
   };
 
   const handleConfirmClear = () => {
@@ -78,48 +102,86 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     );
   };
 
+  const cardBg = isDark ? '#151D2F' : '#FFFFFF';
+  const cardBorder = isDark ? '#23304A' : '#E2E8F0';
+  const textPrimary = isDark ? '#F8FAFC' : '#0F172A';
+  const textSecondary = isDark ? '#94A3B8' : '#64748B';
+
   return (
-    <View style={styles.container}>
-      <Header title="Cài Đặt" subtitle="Quản lý & Hệ thống" />
+    <View style={[styles.container, { backgroundColor: isDark ? '#0B0F19' : '#F8FAFC' }]}>
+      <Header
+        title="Cài Đặt"
+        subtitle="Hệ thống & Cá nhân hóa"
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Budget Setting Card */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
           <View style={styles.cardHeader}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="wallet-outline" size={20} color="#3B82F6" />
+            <View
+              style={[
+                styles.iconCircle,
+                { backgroundColor: isDark ? '#1E293B' : '#EFF6FF' },
+              ]}
+            >
+              <Ionicons name="wallet-outline" size={20} color="#38BDF8" />
             </View>
             <View style={styles.cardHeaderTextGroup}>
-              <Text style={styles.cardTitle}>Hạn Mức Chi Tiêu Tháng</Text>
-              <Text style={styles.cardSubtitle}>Cảnh báo khi chi tiêu vượt ngân sách</Text>
+              <Text style={[styles.cardTitle, { color: textPrimary }]}>Hạn Mức Ngân Sách Tháng</Text>
+              <Text style={[styles.cardSubtitle, { color: textSecondary }]}>Cảnh báo khi chi tiêu vượt ngân sách</Text>
             </View>
           </View>
 
           {editingBudget ? (
             <View style={styles.editBudgetRow}>
               <TextInput
-                style={styles.budgetInput}
+                style={[
+                  styles.budgetInput,
+                  {
+                    backgroundColor: isDark ? '#0B0F19' : '#F8FAFC',
+                    borderColor: isDark ? '#334155' : '#CBD5E1',
+                    color: textPrimary,
+                  },
+                ]}
                 keyboardType="numeric"
                 value={budgetInput}
                 onChangeText={setBudgetInput}
                 placeholder="Nhập số tiền VND..."
+                placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
               />
               <TouchableOpacity style={styles.saveBudgetBtn} onPress={handleSaveBudget}>
                 <Text style={styles.saveBudgetBtnText}>Lưu</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.cancelBudgetBtn}
+                style={[
+                  styles.cancelBudgetBtn,
+                  { backgroundColor: isDark ? '#1E293B' : '#E2E8F0' },
+                ]}
                 onPress={() => {
                   setEditingBudget(false);
                   setBudgetInput(budget.toString());
                 }}
               >
-                <Text style={styles.cancelBudgetBtnText}>Hủy</Text>
+                <Text style={[styles.cancelBudgetBtnText, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+                  Hủy
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.budgetDisplayRow}>
-              <Text style={styles.budgetAmountText}>{formatCurrency(budget)}</Text>
+            <View
+              style={[
+                styles.budgetDisplayRow,
+                {
+                  backgroundColor: isDark ? '#0B0F19' : '#F8FAFC',
+                  borderColor: isDark ? '#1E293B' : '#F1F5F9',
+                },
+              ]}
+            >
+              <Text style={[styles.budgetAmountText, { color: textPrimary }]}>
+                {formatCurrency(budget)}
+              </Text>
               <TouchableOpacity
                 style={styles.changeBtn}
                 onPress={() => setEditingBudget(true)}
@@ -130,20 +192,78 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           )}
         </View>
 
-        {/* Data Management Card */}
-        <View style={styles.card}>
-          <Text style={styles.sectionHeaderTitle}>Quản Lý Dữ Liệu</Text>
+        {/* Security & Appearance Card */}
+        <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+          <Text style={[styles.sectionHeaderTitle, { color: textPrimary }]}>Bảo Mật & Giao Diện</Text>
 
+          {/* Theme Switcher */}
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Ionicons name="server-outline" size={20} color="#64748B" />
-              <Text style={styles.settingLabel}>Tổng số bản ghi</Text>
+              <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color="#F59E0B" />
+              <Text style={[styles.settingLabel, { color: textPrimary }]}>Giao diện Tối (Dark Mode Pro)</Text>
             </View>
-            <Text style={styles.settingValue}>{transactionCount} giao dịch</Text>
+            <Switch
+              value={isDark}
+              onValueChange={onToggleTheme}
+              trackColor={{ false: '#CBD5E1', true: '#2563EB' }}
+              thumbColor="#FFFFFF"
+            />
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: cardBorder }]} />
 
+          {/* PIN Lock Switcher */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="lock-closed-outline" size={20} color="#10B981" />
+              <View>
+                <Text style={[styles.settingLabel, { color: textPrimary }]}>Khóa mã PIN / FaceID</Text>
+                <Text style={[styles.settingSubLabel, { color: textSecondary }]}>Yêu cầu mã 1234 khi mở app</Text>
+              </View>
+            </View>
+            <Switch
+              value={settings.pinEnabled}
+              onValueChange={handleTogglePin}
+              trackColor={{ false: '#CBD5E1', true: '#10B981' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
+        {/* Pro Tools & Data Management */}
+        <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+          <Text style={[styles.sectionHeaderTitle, { color: textPrimary }]}>Công Cụ Nâng Cao</Text>
+
+          {/* Export to Excel */}
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={() => exportTransactionsToCSV(transactions)}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="document-text-outline" size={20} color="#38BDF8" />
+              <Text style={[styles.settingLabel, { color: '#38BDF8', fontWeight: '700' }]}>
+                Xuất Báo Cáo Excel (.CSV)
+              </Text>
+            </View>
+            <Ionicons name="download-outline" size={18} color="#38BDF8" />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: cardBorder }]} />
+
+          {/* Re-play Intro */}
+          <TouchableOpacity style={styles.actionRow} onPress={onShowOnboarding}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="sparkles-outline" size={20} color="#F59E0B" />
+              <Text style={[styles.settingLabel, { color: textPrimary }]}>
+                Xem lại Giới thiệu ứng dụng (Intro)
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={textSecondary} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: cardBorder }]} />
+
+          {/* Reset sample data */}
           <TouchableOpacity style={styles.actionRow} onPress={handleConfirmResetSample}>
             <View style={styles.settingLeft}>
               <Ionicons name="refresh-outline" size={20} color="#3B82F6" />
@@ -151,11 +271,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 Khôi phục dữ liệu mẫu
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={18} color={textSecondary} />
           </TouchableOpacity>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: cardBorder }]} />
 
+          {/* Clear all */}
           <TouchableOpacity style={styles.actionRow} onPress={handleConfirmClear}>
             <View style={styles.settingLeft}>
               <Ionicons name="trash-outline" size={20} color="#EF4444" />
@@ -163,31 +284,33 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 Xóa toàn bộ dữ liệu
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={18} color={textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* App Info Card */}
-        <View style={styles.card}>
-          <Text style={styles.sectionHeaderTitle}>Thông Tin Ứng Dụng</Text>
+        <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+          <Text style={[styles.sectionHeaderTitle, { color: textPrimary }]}>Thông Tin Ứng Dụng</Text>
 
           <View style={styles.settingRow}>
-            <Text style={styles.infoLabel}>Tên ứng dụng</Text>
-            <Text style={styles.infoValue}>Sổ Thu Chi (Expense Tracker)</Text>
+            <Text style={[styles.infoLabel, { color: textSecondary }]}>Tên ứng dụng</Text>
+            <Text style={[styles.infoValue, { color: textPrimary }]}>FinTrack Pro - Sổ Thu Chi</Text>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: cardBorder }]} />
 
           <View style={styles.settingRow}>
-            <Text style={styles.infoLabel}>Phiên bản</Text>
-            <Text style={styles.infoValue}>1.0.0 (Build iOS .IPA)</Text>
+            <Text style={[styles.infoLabel, { color: textSecondary }]}>Phiên bản</Text>
+            <Text style={[styles.infoValue, { color: textPrimary }]}>2.0.0 (Pro Edition)</Text>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: cardBorder }]} />
 
           <View style={styles.settingRow}>
-            <Text style={styles.infoLabel}>Môi trường</Text>
-            <Text style={styles.infoValue}>React Native / Expo EAS</Text>
+            <Text style={[styles.infoLabel, { color: textSecondary }]}>Đóng gói iOS</Text>
+            <Text style={{ color: '#38BDF8', fontWeight: '700', fontSize: 13 }}>
+              Sẵn sàng xuất file .IPA
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -198,18 +321,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -227,7 +347,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -237,36 +356,31 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
   },
   cardSubtitle: {
     fontSize: 12,
-    color: '#64748B',
   },
   budgetDisplayRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
   },
   budgetAmountText: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
   },
   changeBtn: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#2563EB',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 10,
   },
   changeBtnText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   editBudgetRow: {
@@ -276,9 +390,7 @@ const styles = StyleSheet.create({
   },
   budgetInput: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -296,20 +408,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   cancelBudgetBtn: {
-    backgroundColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 10,
   },
   cancelBudgetBtnText: {
-    color: '#475569',
     fontWeight: '600',
     fontSize: 13,
   },
   sectionHeaderTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 16,
   },
   settingRow: {
@@ -325,13 +434,11 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 14,
-    color: '#334155',
     fontWeight: '500',
   },
-  settingValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
+  settingSubLabel: {
+    fontSize: 11,
+    marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
@@ -341,16 +448,13 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#F1F5F9',
     marginVertical: 4,
   },
   infoLabel: {
     fontSize: 13,
-    color: '#64748B',
   },
   infoValue: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontWeight: '700',
   },
 });

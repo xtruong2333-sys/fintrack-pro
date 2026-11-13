@@ -10,33 +10,57 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Transaction } from './src/types';
+import { Transaction, AppSettings, ThemeMode } from './src/types';
 import { StorageService } from './src/services/storage';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { AddTransactionModal } from './src/components/AddTransactionModal';
+import { PhoneMockupWrapper } from './src/components/PhoneMockupWrapper';
+import { AnimatedSplashScreen } from './src/components/AnimatedSplashScreen';
+import { OnboardingModal } from './src/components/OnboardingModal';
+import { PinLockScreen } from './src/components/PinLockScreen';
 import { DEFAULT_BUDGET } from './src/constants/categories';
 
 type TabType = 'home' | 'analytics' | 'history' | 'settings';
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budget, setBudget] = useState<number>(DEFAULT_BUDGET);
+  const [settings, setSettings] = useState<AppSettings>({
+    theme: 'dark',
+    pinEnabled: false,
+    pinCode: '1234',
+    hasSeenOnboarding: false,
+  });
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   // Load data from local storage
   const loadData = useCallback(async () => {
     try {
-      const [storedTransactions, storedBudget] = await Promise.all([
+      const [storedTransactions, storedBudget, storedSettings] = await Promise.all([
         StorageService.getTransactions(),
         StorageService.getBudget(),
+        StorageService.getSettings(),
       ]);
       setTransactions(storedTransactions);
       setBudget(storedBudget);
+      setSettings(storedSettings);
+
+      // Check security & onboarding
+      if (storedSettings.pinEnabled) {
+        setIsLocked(true);
+      }
+      if (!storedSettings.hasSeenOnboarding) {
+        setShowOnboarding(true);
+      }
     } catch (e) {
       console.error('Error loading data:', e);
     }
@@ -52,35 +76,42 @@ export default function App() {
     setRefreshing(false);
   };
 
-  // Add new transaction
   const handleAddTransaction = async (data: any) => {
     const newTx = await StorageService.addTransaction(data);
     setTransactions((prev) => [newTx, ...prev]);
   };
 
-  // Delete transaction
   const handleDeleteTransaction = async (id: string) => {
     await StorageService.deleteTransaction(id);
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Update Budget
   const handleUpdateBudget = async (newBudget: number) => {
     await StorageService.setBudget(newBudget);
     setBudget(newBudget);
   };
 
-  // Clear all data
+  const handleUpdateSettings = async (partial: Partial<AppSettings>) => {
+    const updated = await StorageService.updateSettings(partial);
+    setSettings(updated);
+  };
+
+  const handleToggleTheme = () => {
+    const newTheme: ThemeMode = settings.theme === 'dark' ? 'light' : 'dark';
+    handleUpdateSettings({ theme: newTheme });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   const handleClearData = async () => {
     await StorageService.clearAllData();
     setTransactions([]);
     setBudget(DEFAULT_BUDGET);
   };
 
-  // Reset sample data
   const handleResetSampleData = async () => {
-    await StorageService.clearAllData();
-    await loadData();
+    const samples = await StorageService.resetToSampleData();
+    setTransactions(samples);
+    setBudget(DEFAULT_BUDGET);
   };
 
   const handleTabPress = (tab: TabType) => {
@@ -88,140 +119,221 @@ export default function App() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const isDark = settings.theme === 'dark';
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
+    <PhoneMockupWrapper isDark={isDark}>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: isDark ? '#0B0F19' : '#F8FAFC' },
+        ]}
+      >
+        <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      {/* Main Screen Content */}
-      <View style={styles.content}>
-        {activeTab === 'home' && (
-          <HomeScreen
-            transactions={transactions}
-            budget={budget}
-            onOpenAddModal={() => setIsAddModalVisible(true)}
-            onDeleteTransaction={handleDeleteTransaction}
-            onNavigateToHistory={() => setActiveTab('history')}
-            onRefresh={handleRefresh}
-            refreshing={refreshing}
+        {/* 1. Animated Splash Screen */}
+        {showSplash && (
+          <AnimatedSplashScreen onFinish={() => setShowSplash(false)} />
+        )}
+
+        {/* 2. Security PIN Lock Screen */}
+        {!showSplash && isLocked && (
+          <PinLockScreen
+            correctPin={settings.pinCode || '1234'}
+            onUnlock={() => setIsLocked(false)}
           />
         )}
 
-        {activeTab === 'analytics' && (
-          <AnalyticsScreen transactions={transactions} />
-        )}
-
-        {activeTab === 'history' && (
-          <HistoryScreen
-            transactions={transactions}
-            onDeleteTransaction={handleDeleteTransaction}
-            onOpenAddModal={() => setIsAddModalVisible(true)}
+        {/* 3. Onboarding Intro Modal */}
+        {!showSplash && !isLocked && showOnboarding && (
+          <OnboardingModal
+            visible={showOnboarding}
+            onFinish={() => {
+              setShowOnboarding(false);
+              handleUpdateSettings({ hasSeenOnboarding: true });
+            }}
           />
         )}
 
-        {activeTab === 'settings' && (
-          <SettingsScreen
-            budget={budget}
-            transactionCount={transactions.length}
-            onUpdateBudget={handleUpdateBudget}
-            onClearData={handleClearData}
-            onResetSampleData={handleResetSampleData}
-          />
-        )}
-      </View>
-
-      {/* Floating Add Button for Center Tab */}
-      <View style={styles.bottomNavWrapper}>
-        <View style={styles.bottomTabBar}>
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => handleTabPress('home')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={activeTab === 'home' ? 'wallet' : 'wallet-outline'}
-              size={24}
-              color={activeTab === 'home' ? '#0F172A' : '#94A3B8'}
+        {/* 4. Main App Content */}
+        <View style={styles.content}>
+          {activeTab === 'home' && (
+            <HomeScreen
+              transactions={transactions}
+              budget={budget}
+              theme={settings.theme}
+              onToggleTheme={handleToggleTheme}
+              onOpenAddModal={() => setIsAddModalVisible(true)}
+              onDeleteTransaction={handleDeleteTransaction}
+              onNavigateToHistory={() => setActiveTab('history')}
+              onRefresh={handleRefresh}
+              refreshing={refreshing}
             />
-            <Text style={[styles.tabLabel, activeTab === 'home' && styles.tabLabelActive]}>
-              Tổng quan
-            </Text>
-          </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => handleTabPress('analytics')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={activeTab === 'analytics' ? 'bar-chart' : 'bar-chart-outline'}
-              size={24}
-              color={activeTab === 'analytics' ? '#0F172A' : '#94A3B8'}
+          {activeTab === 'analytics' && (
+            <AnalyticsScreen
+              transactions={transactions}
+              theme={settings.theme}
+              onToggleTheme={handleToggleTheme}
             />
-            <Text style={[styles.tabLabel, activeTab === 'analytics' && styles.tabLabelActive]}>
-              Thống kê
-            </Text>
-          </TouchableOpacity>
+          )}
 
-          {/* Quick Center Add Button */}
-          <View style={styles.centerButtonPlaceholder}>
+          {activeTab === 'history' && (
+            <HistoryScreen
+              transactions={transactions}
+              theme={settings.theme}
+              onToggleTheme={handleToggleTheme}
+              onDeleteTransaction={handleDeleteTransaction}
+              onOpenAddModal={() => setIsAddModalVisible(true)}
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <SettingsScreen
+              budget={budget}
+              transactions={transactions}
+              settings={settings}
+              theme={settings.theme}
+              onToggleTheme={handleToggleTheme}
+              onUpdateBudget={handleUpdateBudget}
+              onUpdateSettings={handleUpdateSettings}
+              onClearData={handleClearData}
+              onResetSampleData={handleResetSampleData}
+              onShowOnboarding={() => setShowOnboarding(true)}
+            />
+          )}
+        </View>
+
+        {/* Bottom Tab Bar */}
+        <View style={styles.bottomNavWrapper}>
+          <View
+            style={[
+              styles.bottomTabBar,
+              {
+                backgroundColor: isDark ? '#111827' : '#FFFFFF',
+                borderTopColor: isDark ? '#1F2937' : '#F1F5F9',
+              },
+            ]}
+          >
             <TouchableOpacity
-              style={styles.centerAddButton}
-              onPress={() => {
-                setIsAddModalVisible(true);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              }}
-              activeOpacity={0.85}
+              style={styles.tabItem}
+              onPress={() => handleTabPress('home')}
+              activeOpacity={0.7}
             >
-              <Ionicons name="add" size={30} color="#FFFFFF" />
+              <Ionicons
+                name={activeTab === 'home' ? 'wallet' : 'wallet-outline'}
+                size={23}
+                color={activeTab === 'home' ? '#38BDF8' : isDark ? '#64748B' : '#94A3B8'}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isDark ? '#64748B' : '#94A3B8' },
+                  activeTab === 'home' && { color: '#38BDF8', fontWeight: '800' },
+                ]}
+              >
+                Tổng quan
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.tabItem}
+              onPress={() => handleTabPress('analytics')}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={activeTab === 'analytics' ? 'bar-chart' : 'bar-chart-outline'}
+                size={23}
+                color={activeTab === 'analytics' ? '#38BDF8' : isDark ? '#64748B' : '#94A3B8'}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isDark ? '#64748B' : '#94A3B8' },
+                  activeTab === 'analytics' && { color: '#38BDF8', fontWeight: '800' },
+                ]}
+              >
+                Thống kê
+              </Text>
+            </TouchableOpacity>
+
+            {/* Quick Center Add Button with Pulse Glow */}
+            <View style={styles.centerButtonPlaceholder}>
+              <TouchableOpacity
+                style={[
+                  styles.centerAddButton,
+                  { backgroundColor: isDark ? '#2563EB' : '#0F172A' },
+                ]}
+                onPress={() => {
+                  setIsAddModalVisible(true);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="add" size={28} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.tabItem}
+              onPress={() => handleTabPress('history')}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={activeTab === 'history' ? 'receipt' : 'receipt-outline'}
+                size={23}
+                color={activeTab === 'history' ? '#38BDF8' : isDark ? '#64748B' : '#94A3B8'}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isDark ? '#64748B' : '#94A3B8' },
+                  activeTab === 'history' && { color: '#38BDF8', fontWeight: '800' },
+                ]}
+              >
+                Lịch sử
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.tabItem}
+              onPress={() => handleTabPress('settings')}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={activeTab === 'settings' ? 'settings' : 'settings-outline'}
+                size={23}
+                color={activeTab === 'settings' ? '#38BDF8' : isDark ? '#64748B' : '#94A3B8'}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isDark ? '#64748B' : '#94A3B8' },
+                  activeTab === 'settings' && { color: '#38BDF8', fontWeight: '800' },
+                ]}
+              >
+                Cài đặt
+              </Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => handleTabPress('history')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={activeTab === 'history' ? 'receipt' : 'receipt-outline'}
-              size={24}
-              color={activeTab === 'history' ? '#0F172A' : '#94A3B8'}
-            />
-            <Text style={[styles.tabLabel, activeTab === 'history' && styles.tabLabelActive]}>
-              Lịch sử
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => handleTabPress('settings')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={activeTab === 'settings' ? 'settings' : 'settings-outline'}
-              size={24}
-              color={activeTab === 'settings' ? '#0F172A' : '#94A3B8'}
-            />
-            <Text style={[styles.tabLabel, activeTab === 'settings' && styles.tabLabelActive]}>
-              Cài đặt
-            </Text>
-          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Add Transaction Modal */}
-      <AddTransactionModal
-        visible={isAddModalVisible}
-        onClose={() => setIsAddModalVisible(false)}
-        onAdd={handleAddTransaction}
-      />
-    </SafeAreaView>
+        {/* Add Transaction Modal */}
+        <AddTransactionModal
+          visible={isAddModalVisible}
+          onClose={() => setIsAddModalVisible(false)}
+          onAdd={handleAddTransaction}
+          isDark={isDark}
+        />
+      </SafeAreaView>
+    </PhoneMockupWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
     paddingTop: Platform.OS === 'android' ? 28 : 0,
   },
   content: {
@@ -238,14 +350,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
     paddingVertical: 8,
     paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 8,
   },
@@ -255,14 +365,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '500',
-    color: '#94A3B8',
-    marginTop: 4,
-  },
-  tabLabelActive: {
-    color: '#0F172A',
-    fontWeight: '700',
+    marginTop: 3,
   },
   centerButtonPlaceholder: {
     alignItems: 'center',
@@ -270,16 +375,15 @@ const styles = StyleSheet.create({
     width: 60,
   },
   centerAddButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#0F172A',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -24,
-    shadowColor: '#0F172A',
+    marginTop: -22,
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 6,
   },

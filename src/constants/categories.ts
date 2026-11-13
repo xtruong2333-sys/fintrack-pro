@@ -1,4 +1,11 @@
-import { Category } from '../types';
+import { Category, Wallet } from '../types';
+
+export const WALLETS: Wallet[] = [
+  { id: 'cash', name: 'Tiền mặt', icon: 'cash-outline', color: '#10B981', description: 'Chi tiêu hằng ngày' },
+  { id: 'bank', name: 'Ngân hàng', icon: 'card-outline', color: '#3B82F6', description: 'Tài khoản chính / Thẻ' },
+  { id: 'ewallet', name: 'Ví điện tử', icon: 'phone-portrait-outline', color: '#EC4899', description: 'MoMo, ZaloPay, ViettelMoney' },
+  { id: 'savings', name: 'Sổ tiết kiệm', icon: 'vault-outline', color: '#F59E0B', description: 'Khoản tích lũy lâu dài' },
+];
 
 export const EXPENSE_CATEGORIES: Category[] = [
   { id: 'food', name: 'Ăn uống', icon: 'fast-food', color: '#FF6B6B', type: 'expense' },

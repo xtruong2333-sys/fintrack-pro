@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { TransactionType, Category } from '../types';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants/categories';
+import { TransactionType, Category, WalletType, Wallet } from '../types';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, WALLETS } from '../constants/categories';
 import { formatCurrency, getTodayString } from '../utils/formatters';
 
 interface AddTransactionModalProps {
@@ -27,19 +27,24 @@ interface AddTransactionModalProps {
     categoryName: string;
     categoryIcon: string;
     categoryColor: string;
+    walletId: WalletType;
+    walletName: string;
     note: string;
     date: string;
   }) => void;
+  isDark?: boolean;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   visible,
   onClose,
   onAdd,
+  isDark = true,
 }) => {
   const [type, setType] = useState<TransactionType>('expense');
   const [rawAmount, setRawAmount] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<Category>(EXPENSE_CATEGORIES[0]);
+  const [selectedWallet, setSelectedWallet] = useState<Wallet>(WALLETS[1]); // Default: Ngân hàng
   const [note, setNote] = useState<string>('');
   const [date, setDate] = useState<string>(getTodayString());
 
@@ -72,6 +77,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       categoryName: selectedCategory.name,
       categoryIcon: selectedCategory.icon,
       categoryColor: selectedCategory.color,
+      walletId: selectedWallet.id,
+      walletName: selectedWallet.name,
       note: note.trim(),
       date,
     });
@@ -90,18 +97,36 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
       >
-        <View style={styles.sheetContainer}>
+        <View
+          style={[
+            styles.sheetContainer,
+            { backgroundColor: isDark ? '#151D2F' : '#FFFFFF' },
+          ]}
+        >
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Giao Dịch Mới</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={20} color="#64748B" />
+          <View style={[styles.header, { borderBottomColor: isDark ? '#23304A' : '#F1F5F9' }]}>
+            <Text style={[styles.headerTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+              Thêm Giao Dịch Mới
+            </Text>
+            <TouchableOpacity
+              onPress={onClose}
+              style={[
+                styles.closeBtn,
+                { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' },
+              ]}
+            >
+              <Ionicons name="close" size={20} color={isDark ? '#94A3B8' : '#64748B'} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             {/* Segmented Type Controller */}
-            <View style={styles.segmentedContainer}>
+            <View
+              style={[
+                styles.segmentedContainer,
+                { backgroundColor: isDark ? '#0B0F19' : '#F1F5F9' },
+              ]}
+            >
               <TouchableOpacity
                 style={[styles.segmentBtn, type === 'expense' && styles.segmentExpenseActive]}
                 onPress={() => handleTypeChange('expense')}
@@ -132,17 +157,27 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </View>
 
             {/* Amount Display & Input */}
-            <View style={styles.amountBox}>
-              <Text style={styles.amountLabel}>Số tiền (VND)</Text>
+            <View
+              style={[
+                styles.amountBox,
+                {
+                  backgroundColor: isDark ? '#0B0F19' : '#F8FAFC',
+                  borderColor: isDark ? '#23304A' : '#E2E8F0',
+                },
+              ]}
+            >
+              <Text style={[styles.amountLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Số tiền (VND)
+              </Text>
               <View style={styles.amountRow}>
                 <TextInput
                   style={[
                     styles.amountInput,
-                    { color: type === 'expense' ? '#EF4444' : '#10B981' },
+                    { color: type === 'expense' ? '#F87171' : '#34D399' },
                   ]}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#CBD5E1"
+                  placeholderTextColor={isDark ? '#475569' : '#CBD5E1'}
                   value={rawAmount ? formatCurrency(parseInt(rawAmount, 10)) : ''}
                   onChangeText={(text) => {
                     const clean = text.replace(/[^0-9]/g, '');
@@ -154,13 +189,21 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
             {/* Quick Add Chips */}
             <View style={styles.quickChipsRow}>
-              {[50000, 100000, 200000, 500000].map((val) => (
+              {[50000, 100000, 200000, 500000, 1000000].map((val) => (
                 <TouchableOpacity
                   key={val}
-                  style={styles.chip}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+                      borderColor: isDark ? '#334155' : '#E2E8F0',
+                    },
+                  ]}
                   onPress={() => handleQuickAdd(val)}
                 >
-                  <Text style={styles.chipText}>+{val / 1000}k</Text>
+                  <Text style={[styles.chipText, { color: isDark ? '#E2E8F0' : '#334155' }]}>
+                    +{val >= 1000000 ? `${val / 1000000}tr` : `${val / 1000}k`}
+                  </Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
@@ -171,8 +214,48 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </TouchableOpacity>
             </View>
 
+            {/* Wallet Picker */}
+            <Text style={[styles.sectionTitle, { color: isDark ? '#F8FAFC' : '#334155' }]}>
+              Chọn Nguồn Tiền
+            </Text>
+            <View style={styles.walletRow}>
+              {WALLETS.map((w) => {
+                const isSelected = selectedWallet.id === w.id;
+                return (
+                  <TouchableOpacity
+                    key={w.id}
+                    style={[
+                      styles.walletChip,
+                      {
+                        backgroundColor: isDark ? '#0B0F19' : '#F8FAFC',
+                        borderColor: isSelected ? w.color : isDark ? '#23304A' : '#E2E8F0',
+                      },
+                      isSelected && { backgroundColor: `${w.color}20`, borderWidth: 1.5 },
+                    ]}
+                    onPress={() => {
+                      setSelectedWallet(w);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                  >
+                    <Ionicons name={w.icon as any} size={15} color={w.color} />
+                    <Text
+                      style={[
+                        styles.walletChipText,
+                        { color: isSelected ? (isDark ? '#F8FAFC' : '#0F172A') : isDark ? '#94A3B8' : '#64748B' },
+                        isSelected && { fontWeight: '700' },
+                      ]}
+                    >
+                      {w.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
             {/* Category Selector */}
-            <Text style={styles.sectionTitle}>Chọn Danh Mục</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#F8FAFC' : '#334155' }]}>
+              Chọn Danh Mục
+            </Text>
             <View style={styles.categoriesGrid}>
               {categories.map((cat) => {
                 const isSelected = selectedCategory.id === cat.id;
@@ -181,7 +264,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     key={cat.id}
                     style={[
                       styles.categoryCard,
-                      isSelected && { borderColor: cat.color, backgroundColor: `${cat.color}15` },
+                      {
+                        backgroundColor: isDark ? '#0B0F19' : '#F8FAFC',
+                        borderColor: isSelected ? cat.color : isDark ? '#23304A' : '#E2E8F0',
+                      },
+                      isSelected && { backgroundColor: `${cat.color}20`, borderWidth: 1.5 },
                     ]}
                     onPress={() => {
                       setSelectedCategory(cat);
@@ -194,7 +281,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     <Text
                       style={[
                         styles.catName,
-                        isSelected && { color: '#0F172A', fontWeight: '700' },
+                        { color: isDark ? '#CBD5E1' : '#64748B' },
+                        isSelected && { color: isDark ? '#F8FAFC' : '#0F172A', fontWeight: '700' },
                       ]}
                       numberOfLines={1}
                     >
@@ -206,11 +294,20 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </View>
 
             {/* Note Input */}
-            <Text style={styles.sectionTitle}>Ghi Chú</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#F8FAFC' : '#334155' }]}>
+              Ghi Chú
+            </Text>
             <TextInput
-              style={styles.noteInput}
-              placeholder="VD: Mua trà sữa, xăng xe, tiền cơm..."
-              placeholderTextColor="#94A3B8"
+              style={[
+                styles.noteInput,
+                {
+                  backgroundColor: isDark ? '#0B0F19' : '#F8FAFC',
+                  borderColor: isDark ? '#23304A' : '#E2E8F0',
+                  color: isDark ? '#F8FAFC' : '#0F172A',
+                },
+              ]}
+              placeholder="VD: Cà phê sáng, tiền chợ, sinh nhật..."
+              placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
               value={note}
               onChangeText={setNote}
               maxLength={100}
@@ -237,11 +334,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(7, 11, 20, 0.75)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '90%',
@@ -255,18 +351,15 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: '800',
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -276,7 +369,6 @@ const styles = StyleSheet.create({
   },
   segmentedContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
     borderRadius: 14,
     padding: 4,
     marginBottom: 16,
@@ -305,18 +397,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   amountBox: {
-    backgroundColor: '#F8FAFC',
     borderRadius: 18,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     marginBottom: 12,
   },
   amountLabel: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
+    fontWeight: '600',
     marginBottom: 4,
   },
   amountRow: {
@@ -332,35 +421,49 @@ const styles = StyleSheet.create({
   quickChipsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   chip: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   chipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
   },
   chipClear: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#FECACA',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderColor: '#EF4444',
   },
   chipClearText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#EF4444',
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#334155',
     marginBottom: 10,
+  },
+  walletRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 18,
+  },
+  walletChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  walletChipText: {
+    fontSize: 12,
   },
   categoriesGrid: {
     flexDirection: 'row',
@@ -370,12 +473,10 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     width: '31%',
-    backgroundColor: '#F8FAFC',
     borderRadius: 14,
     padding: 10,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderWidth: 1,
   },
   catIconCircle: {
     width: 40,
@@ -388,18 +489,14 @@ const styles = StyleSheet.create({
   catName: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#64748B',
     textAlign: 'center',
   },
   noteInput: {
-    backgroundColor: '#F8FAFC',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     fontSize: 14,
-    color: '#0F172A',
     marginBottom: 24,
   },
   saveButton: {
@@ -409,7 +506,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 4,
   },

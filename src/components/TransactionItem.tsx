@@ -7,9 +7,14 @@ import { formatCurrency, formatDateDisplay } from '../utils/formatters';
 interface TransactionItemProps {
   transaction: Transaction;
   onDelete?: (id: string) => void;
+  isDark?: boolean;
 }
 
-export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete }) => {
+export const TransactionItem: React.FC<TransactionItemProps> = ({
+  transaction,
+  onDelete,
+  isDark = true,
+}) => {
   const isIncome = transaction.type === 'income';
 
   const handleDelete = () => {
@@ -25,11 +30,19 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, o
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: isDark ? '#151D2F' : '#FFFFFF',
+          borderColor: isDark ? '#23304A' : '#F1F5F9',
+        },
+      ]}
+    >
       <View
         style={[
           styles.iconContainer,
-          { backgroundColor: transaction.categoryColor ? `${transaction.categoryColor}20` : '#E2E8F0' },
+          { backgroundColor: transaction.categoryColor ? `${transaction.categoryColor}25` : '#E2E8F0' },
         ]}
       >
         <Ionicons
@@ -41,7 +54,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, o
 
       <View style={styles.contentContainer}>
         <View style={styles.topLine}>
-          <Text style={styles.categoryName} numberOfLines={1}>
+          <Text
+            style={[styles.categoryName, { color: isDark ? '#F8FAFC' : '#1E293B' }]}
+            numberOfLines={1}
+          >
             {transaction.categoryName}
           </Text>
           <Text style={[styles.amountText, isIncome ? styles.incomeText : styles.expenseText]}>
@@ -50,16 +66,31 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, o
         </View>
 
         <View style={styles.bottomLine}>
-          <Text style={styles.noteText} numberOfLines={1}>
-            {transaction.note || 'Không có ghi chú'}
-          </Text>
+          <View style={styles.noteGroup}>
+            <Text
+              style={[styles.noteText, { color: isDark ? '#94A3B8' : '#64748B' }]}
+              numberOfLines={1}
+            >
+              {transaction.note || 'Không có ghi chú'}
+            </Text>
+            {transaction.walletName && (
+              <View
+                style={[
+                  styles.walletBadge,
+                  { backgroundColor: isDark ? '#1E293B' : '#EFF6FF' },
+                ]}
+              >
+                <Text style={styles.walletBadgeText}>{transaction.walletName}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.dateText}>{formatDateDisplay(transaction.date)}</Text>
         </View>
       </View>
 
       {onDelete && (
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="trash-outline" size={17} color="#94A3B8" />
+          <Ionicons name="trash-outline" size={16} color="#64748B" />
         </TouchableOpacity>
       )}
     </View>
@@ -72,14 +103,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   },
@@ -104,7 +133,6 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1E293B',
     flex: 1,
     marginRight: 8,
   },
@@ -113,25 +141,40 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   incomeText: {
-    color: '#10B981',
+    color: '#34D399',
   },
   expenseText: {
-    color: '#EF4444',
+    color: '#F87171',
   },
   bottomLine: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  noteText: {
-    fontSize: 13,
-    color: '#64748B',
+  noteGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
     marginRight: 8,
+    gap: 6,
+  },
+  noteText: {
+    fontSize: 12.5,
+    maxWidth: 130,
+  },
+  walletBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  walletBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#38BDF8',
   },
   dateText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     fontWeight: '500',
   },
   deleteButton: {

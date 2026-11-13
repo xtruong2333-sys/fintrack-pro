@@ -1,10 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction } from '../types';
-import { DEFAULT_BUDGET, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants/categories';
+import { Transaction, AppSettings, ThemeMode } from '../types';
+import { DEFAULT_BUDGET } from '../constants/categories';
 import { getTodayString } from '../utils/formatters';
 
-const TRANSACTIONS_KEY = '@transactions_v1';
-const BUDGET_KEY = '@budget_v1';
+const TRANSACTIONS_KEY = '@transactions_v2';
+const BUDGET_KEY = '@budget_v2';
+const SETTINGS_KEY = '@app_settings_v2';
+
+const DEFAULT_SETTINGS: AppSettings = {
+  theme: 'dark', // Mặc định Dark Mode Pro sang trọng
+  pinEnabled: false,
+  pinCode: '1234',
+  hasSeenOnboarding: false,
+};
 
 const getInitialSampleData = (): Transaction[] => {
   const today = getTodayString();
@@ -23,12 +31,14 @@ const getInitialSampleData = (): Transaction[] => {
     {
       id: 'tx_sample_1',
       type: 'income',
-      amount: 18500000,
+      amount: 22000000,
       categoryId: 'salary',
       categoryName: 'Tiền lương',
       categoryIcon: 'wallet',
       categoryColor: '#2ED573',
-      note: 'Lương tháng nhận qua tài khoản',
+      walletId: 'bank',
+      walletName: 'Ngân hàng',
+      note: 'Lương tháng nhận qua Techcombank',
       date: getPastDate(5),
       createdAt: Date.now() - 5 * 86400000,
     },
@@ -40,55 +50,65 @@ const getInitialSampleData = (): Transaction[] => {
       categoryName: 'Hóa đơn & Nhà',
       categoryIcon: 'home',
       categoryColor: '#F7B731',
-      note: 'Tiền thuê nhà + điện nước',
+      walletId: 'bank',
+      walletName: 'Ngân hàng',
+      note: 'Tiền thuê căn hộ tháng này',
       date: getPastDate(4),
       createdAt: Date.now() - 4 * 86400000,
     },
     {
       id: 'tx_sample_3',
       type: 'expense',
-      amount: 450000,
+      amount: 320000,
       categoryId: 'food',
       categoryName: 'Ăn uống',
       categoryIcon: 'fast-food',
       categoryColor: '#FF6B6B',
-      note: 'Đi ăn tối cùng bạn bè',
+      walletId: 'ewallet',
+      walletName: 'Ví điện tử',
+      note: 'Buffet lẩu cùng đồng nghiệp',
       date: getPastDate(2),
       createdAt: Date.now() - 2 * 86400000,
     },
     {
       id: 'tx_sample_4',
       type: 'expense',
-      amount: 650000,
+      amount: 580000,
       categoryId: 'shopping',
       categoryName: 'Mua sắm',
       categoryIcon: 'cart',
       categoryColor: '#4ECDC4',
-      note: 'Mua sắm đồ dùng cá nhân',
+      walletId: 'cash',
+      walletName: 'Tiền mặt',
+      note: 'Mua giày & phụ kiện thể thao',
       date: getPastDate(1),
       createdAt: Date.now() - 86400000,
     },
     {
       id: 'tx_sample_5',
       type: 'income',
-      amount: 1200000,
-      categoryId: 'freelance',
-      categoryName: 'Làm thêm / Phụ',
-      categoryIcon: 'briefcase',
-      categoryColor: '#9B59B6',
-      note: 'Thu nhập làm thêm dự án',
+      amount: 3500000,
+      categoryId: 'investment',
+      categoryName: 'Đầu tư & Lãi',
+      categoryIcon: 'trending-up',
+      categoryColor: '#1E90FF',
+      walletId: 'savings',
+      walletName: 'Sổ tiết kiệm',
+      note: 'Cổ tức & lợi nhuận tài chính',
       date: today,
-      createdAt: Date.now() - 10000,
+      createdAt: Date.now() - 20000,
     },
     {
       id: 'tx_sample_6',
       type: 'expense',
-      amount: 85000,
+      amount: 65000,
       categoryId: 'food',
       categoryName: 'Ăn uống',
       categoryIcon: 'fast-food',
       categoryColor: '#FF6B6B',
-      note: 'Cà phê sáng và ăn trưa',
+      walletId: 'cash',
+      walletName: 'Tiền mặt',
+      note: 'Cà phê sáng Highlands Coffee',
       date: today,
       createdAt: Date.now(),
     },
@@ -100,7 +120,6 @@ export const StorageService = {
     try {
       const data = await AsyncStorage.getItem(TRANSACTIONS_KEY);
       if (!data) {
-        // Khởi tạo dữ liệu mẫu lần đầu mở app
         const sample = getInitialSampleData();
         await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(sample));
         return sample;
@@ -143,14 +162,31 @@ export const StorageService = {
     await AsyncStorage.setItem(BUDGET_KEY, budget.toString());
   },
 
+  async getSettings(): Promise<AppSettings> {
+    try {
+      const val = await AsyncStorage.getItem(SETTINGS_KEY);
+      return val ? { ...DEFAULT_SETTINGS, ...JSON.parse(val) } : DEFAULT_SETTINGS;
+    } catch (e) {
+      return DEFAULT_SETTINGS;
+    }
+  },
+
+  async updateSettings(partial: Partial<AppSettings>): Promise<AppSettings> {
+    const current = await this.getSettings();
+    const updated = { ...current, ...partial };
+    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
   async clearAllData(): Promise<void> {
     await AsyncStorage.removeItem(TRANSACTIONS_KEY);
     await AsyncStorage.removeItem(BUDGET_KEY);
   },
 
-  async exportData(): Promise<string> {
-    const transactions = await this.getTransactions();
-    const budget = await this.getBudget();
-    return JSON.stringify({ transactions, budget, exportedAt: new Date().toISOString() }, null, 2);
+  async resetToSampleData(): Promise<Transaction[]> {
+    const sample = getInitialSampleData();
+    await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(sample));
+    await AsyncStorage.setItem(BUDGET_KEY, DEFAULT_BUDGET.toString());
+    return sample;
   },
 };

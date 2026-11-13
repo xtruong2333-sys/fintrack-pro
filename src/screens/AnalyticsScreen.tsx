@@ -1,23 +1,27 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Transaction } from '../types';
+import { Transaction, ThemeMode } from '../types';
 import { Header } from '../components/Header';
 import { CategoryPieChart } from '../components/CategoryPieChart';
-import { formatCurrency } from '../utils/formatters';
 
 interface AnalyticsScreenProps {
   transactions: Transaction[];
+  theme: ThemeMode;
+  onToggleTheme: () => void;
 }
 
-export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ transactions }) => {
+export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({
+  transactions,
+  theme,
+  onToggleTheme,
+}) => {
   const [filterType, setFilterType] = useState<'expense' | 'income'>('expense');
+  const isDark = theme === 'dark';
 
-  // Lọc theo loại (Chi tiêu hoặc Thu nhập)
   const filtered = transactions.filter((t) => t.type === filterType);
   const totalAmount = filtered.reduce((sum, t) => sum + t.amount, 0);
 
-  // Nhóm theo danh mục
   const categoryMap = new Map<string, { id: string; name: string; amount: number; color: string; icon: string }>();
 
   filtered.forEach((tx) => {
@@ -44,18 +48,30 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ transactions }
 
   const topCategory = categoryList.length > 0 ? categoryList[0] : null;
 
-  // Tính tỷ lệ tiết kiệm tổng quan
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const savingsRate = totalIncome > 0 ? Math.max(0, Math.round(((totalIncome - totalExpense) / totalIncome) * 100)) : 0;
 
   return (
-    <View style={styles.container}>
-      <Header title="Thống Kê" subtitle="Phân tích chi tiêu" />
+    <View style={[styles.container, { backgroundColor: isDark ? '#0B0F19' : '#F8FAFC' }]}>
+      <Header
+        title="Thống Kê"
+        subtitle="Báo cáo phân tích"
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Type Toggle */}
-        <View style={styles.tabContainer}>
+        <View
+          style={[
+            styles.tabContainer,
+            {
+              backgroundColor: isDark ? '#151D2F' : '#FFFFFF',
+              borderColor: isDark ? '#23304A' : '#E2E8F0',
+            },
+          ]}
+        >
           <TouchableOpacity
             style={[styles.tabButton, filterType === 'expense' && styles.tabExpenseActive]}
             onPress={() => setFilterType('expense')}
@@ -79,24 +95,45 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ transactions }
 
         {/* Insight Quick Cards */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Tỷ Lệ Tiết Kiệm</Text>
-            <Text style={[styles.statValue, { color: savingsRate >= 20 ? '#10B981' : '#F59E0B' }]}>
+          <View
+            style={[
+              styles.statCard,
+              {
+                backgroundColor: isDark ? '#151D2F' : '#FFFFFF',
+                borderColor: isDark ? '#23304A' : '#E2E8F0',
+              },
+            ]}
+          >
+            <Text style={[styles.statLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              Tỷ Lệ Tiết Kiệm
+            </Text>
+            <Text style={[styles.statValue, { color: savingsRate >= 20 ? '#34D399' : '#F59E0B' }]}>
               {savingsRate}%
             </Text>
-            <Text style={styles.statDesc}>
+            <Text style={[styles.statDesc, { color: isDark ? '#64748B' : '#94A3B8' }]}>
               {savingsRate >= 20 ? 'Tài chính khỏe mạnh' : 'Cần thắt chặt chi tiêu'}
             </Text>
           </View>
 
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>
+          <View
+            style={[
+              styles.statCard,
+              {
+                backgroundColor: isDark ? '#151D2F' : '#FFFFFF',
+                borderColor: isDark ? '#23304A' : '#E2E8F0',
+              },
+            ]}
+          >
+            <Text style={[styles.statLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
               {filterType === 'expense' ? 'Khoản Chi Lớn Nhất' : 'Nguồn Thu Lớn Nhất'}
             </Text>
-            <Text style={styles.statValue} numberOfLines={1}>
+            <Text
+              style={[styles.statValue, { color: isDark ? '#F8FAFC' : '#0F172A' }]}
+              numberOfLines={1}
+            >
               {topCategory ? topCategory.name : '—'}
             </Text>
-            <Text style={styles.statDesc}>
+            <Text style={[styles.statDesc, { color: isDark ? '#64748B' : '#94A3B8' }]}>
               {topCategory ? `${topCategory.percentage.toFixed(0)}% tổng số` : 'Chưa có dữ liệu'}
             </Text>
           </View>
@@ -116,19 +153,16 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ transactions }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     borderRadius: 14,
     padding: 4,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     marginBottom: 16,
   },
   tabButton: {
@@ -162,11 +196,9 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -175,18 +207,15 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 6,
   },
   statValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
     marginBottom: 4,
   },
   statDesc: {
     fontSize: 11,
-    color: '#94A3B8',
   },
 });

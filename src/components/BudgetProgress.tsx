@@ -6,9 +6,10 @@ import { formatCurrency } from '../utils/formatters';
 interface BudgetProgressProps {
   spent: number;
   budget: number;
+  isDark?: boolean;
 }
 
-export const BudgetProgress: React.FC<BudgetProgressProps> = ({ spent, budget }) => {
+export const BudgetProgress: React.FC<BudgetProgressProps> = ({ spent, budget, isDark = true }) => {
   const percent = budget > 0 ? Math.min(Math.round((spent / budget) * 100), 100) : 0;
   const remaining = budget - spent;
   const isOverBudget = remaining < 0;
@@ -20,18 +21,33 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({ spent, budget })
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: isDark ? '#151D2F' : '#FFFFFF',
+          borderColor: isDark ? '#23304A' : '#E2E8F0',
+        },
+      ]}
+    >
       <View style={styles.topRow}>
         <View style={styles.titleGroup}>
-          <Ionicons name="pie-chart" size={16} color="#64748B" />
-          <Text style={styles.title}>Hạn Mức Tháng Này</Text>
+          <Ionicons name="pie-chart" size={15} color={isDark ? '#38BDF8' : '#2563EB'} />
+          <Text style={[styles.title, { color: isDark ? '#F8FAFC' : '#475569' }]}>
+            Hạn Mức Tháng Này
+          </Text>
         </View>
         <Text style={[styles.percentBadge, { color: getProgressColor() }]}>
           {percent}%
         </Text>
       </View>
 
-      <View style={styles.progressBarBackground}>
+      <View
+        style={[
+          styles.progressBarBackground,
+          { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' },
+        ]}
+      >
         <View
           style={[
             styles.progressBarFill,
@@ -44,11 +60,11 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({ spent, budget })
       </View>
 
       <View style={styles.bottomRow}>
-        <Text style={styles.spentText}>
-          Đã tiêu: <Text style={styles.boldText}>{formatCurrency(spent)}</Text>
+        <Text style={[styles.spentText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+          Đã tiêu: <Text style={{ color: isDark ? '#F8FAFC' : '#1E293B', fontWeight: '700' }}>{formatCurrency(spent)}</Text>
         </Text>
         <Text style={[styles.remainingText, isOverBudget && styles.overBudgetText]}>
-          {isOverBudget ? `Vượt: ${formatCurrency(Math.abs(remaining))}` : `Còn: ${formatCurrency(remaining)}`}
+          {isOverBudget ? `Vượt: ${formatCurrency(Math.abs(remaining))}` : `Còn lại: ${formatCurrency(remaining)}`}
         </Text>
       </View>
     </View>
@@ -60,13 +76,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 16,
     padding: 16,
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -83,23 +97,21 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '700',
   },
   percentBadge: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   progressBarBackground: {
-    height: 10,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 5,
+    height: 9,
+    borderRadius: 4.5,
     overflow: 'hidden',
     marginBottom: 10,
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 5,
+    borderRadius: 4.5,
   },
   bottomRow: {
     flexDirection: 'row',
@@ -108,18 +120,13 @@ const styles = StyleSheet.create({
   },
   spentText: {
     fontSize: 12,
-    color: '#64748B',
-  },
-  boldText: {
-    fontWeight: '600',
-    color: '#1E293B',
   },
   remainingText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#10B981',
+    fontWeight: '700',
+    color: '#34D399',
   },
   overBudgetText: {
-    color: '#EF4444',
+    color: '#F87171',
   },
 });

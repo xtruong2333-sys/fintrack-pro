@@ -1,5 +1,15 @@
 export type TransactionType = 'expense' | 'income';
 
+export type WalletType = 'cash' | 'bank' | 'ewallet' | 'savings';
+
+export interface Wallet {
+  id: WalletType;
+  name: string;
+  icon: string;
+  color: string;
+  description: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -16,18 +26,22 @@ export interface Transaction {
   categoryName: string;
   categoryIcon: string;
   categoryColor: string;
+  walletId: WalletType;
+  walletName: string;
   note: string;
   date: string; // ISO string YYYY-MM-DD
   createdAt: number; // timestamp
 }
 
 export interface BudgetConfig {
-  monthlyLimit: number; // Hạn mức chi tiêu hàng tháng (VND)
+  monthlyLimit: number;
 }
 
-export interface MonthlySummary {
-  totalIncome: number;
-  totalExpense: number;
-  balance: number;
-  savingsRate: number;
+export type ThemeMode = 'dark' | 'light';
+
+export interface AppSettings {
+  theme: ThemeMode;
+  pinEnabled: boolean;
+  pinCode: string;
+  hasSeenOnboarding: boolean;
 }
