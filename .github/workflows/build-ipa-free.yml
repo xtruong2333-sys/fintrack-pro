@@ -35,20 +35,22 @@ jobs:
       - name: Build Archive (Unsigned for Sideloadly)
         working-directory: ios
         run: |
-          xcodebuild -workspace expense-tracker.xcworkspace \
-            -scheme expense-tracker \
+          WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME=$(xcodebuild -list -json | jq -r '.workspace.schemes[0]')
+          echo "Detected Workspace: $WORKSPACE"
+          echo "Detected Scheme: $SCHEME"
+          xcodebuild -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath build/expense-tracker.xcarchive \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
+            -archivePath build/FinTrackPro.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
             archive
 
       - name: Package Payload into .IPA
         run: |
           mkdir -p Payload
-          cp -r ios/build/expense-tracker.xcarchive/Products/Applications/*.app Payload/
+          cp -r ios/build/FinTrackPro.xcarchive/Products/Applications/*.app Payload/
           zip -r FinTrackPro.ipa Payload
           echo "File FinTrackPro.ipa packaged successfully!"
 
